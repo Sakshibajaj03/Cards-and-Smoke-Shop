@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover" />
+  <title>Checkout - Cards & Smoke Shop</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header" role="banner">
+    <div class="header-inner">
+      <div class="brand">
+        <a href="index.html" style="text-decoration:none;color:inherit">
+          <div class="site-title">CARDS & SMOKE</div>
+          <div class="site-sub">Premium E-commerce Store</div>
+        </a>
+      </div>
+      <nav class="nav" role="navigation" aria-label="Main">
+        <a href="index.html">Shop</a>
+        <a href="cart.html" style="position:relative">
+          Cart <span class="cart-badge" style="display:none">0</span>
+        </a>
+        <div id="userMenu">
+          <button class="btn" onclick="showLoginModal()" style="padding:6px 12px;font-size:12px">Login</button>
+        </div>
+        <a href="admin.html" class="btn secondary" style="padding:6px 12px;font-size:12px">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div style="margin-bottom:24px">
+      <a href="cart.html" style="color:var(--accent);text-decoration:none;font-size:14px">← Back to Cart</a>
+    </div>
+
+    <div class="checkout-grid" style="display:grid;grid-template-columns:1fr 400px;gap:32px">
+      <!-- Checkout Form -->
+      <div>
+        <h1 style="font-size:24px;font-family:'Playfair Display',serif;margin-bottom:24px">Checkout</h1>
+        
+        <form id="checkoutForm" onsubmit="handleCheckout(event)">
+          <!-- Shipping Information -->
+          <div class="panel" style="margin-bottom:24px">
+            <h2 style="font-size:18px;margin-bottom:16px">Shipping Information</h2>
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input type="text" id="shippingName" class="input" required placeholder="John Doe"/>
+            </div>
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" id="shippingEmail" class="input" required placeholder="john@example.com"/>
+            </div>
+            <div class="form-group">
+              <label>Phone *</label>
+              <input type="tel" id="shippingPhone" class="input" required placeholder="+91 1234567890"/>
+            </div>
+            <div class="form-group">
+              <label>Address *</label>
+              <textarea id="shippingAddress" class="input" required rows="3" placeholder="Street address, City, State, ZIP"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>City *</label>
+                <input type="text" id="shippingCity" class="input" required placeholder="Newark"/>
+              </div>
+              <div class="form-group" style="flex:1">
+                <label>State *</label>
+                <input type="text" id="shippingState" class="input" required placeholder="New Jersey"/>
+              </div>
+              <div class="form-group" style="width:120px">
+                <label>ZIP Code *</label>
+                <input type="text" id="shippingPin" class="input" required placeholder="07101" pattern="[0-9]{5}"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Method -->
+          <div class="panel">
+            <h2 style="font-size:18px;margin-bottom:16px">Payment Method</h2>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid var(--border);border-radius:8px;cursor:pointer">
+                <input type="radio" name="paymentMethod" value="cod" checked style="width:18px;height:18px"/>
+                <div>
+                  <div style="font-weight:600">Cash on Delivery</div>
+                  <div class="text-muted" style="font-size:12px">Pay when you receive</div>
+                </div>
+              </label>
+              <label style="display:flex;align-items:center;gap:12px;padding:12px;border:2px solid var(--border);border-radius:8px;cursor:pointer">
+                <input type="radio" name="paymentMethod" value="online" style="width:18px;height:18px"/>
+                <div>
+                  <div style="font-weight:600">Online Payment</div>
+                  <div class="text-muted" style="font-size:12px">Credit/Debit Card, UPI, Net Banking</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Order Summary -->
+      <div>
+        <div class="panel order-summary-panel" style="position:sticky;top:100px">
+          <h2 style="font-size:18px;margin-bottom:16px">Order Summary</h2>
+          <div id="checkoutSummary">
+            <!-- Summary will be loaded here -->
+          </div>
+          <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border)">
+            <button type="submit" form="checkoutForm" class="btn" style="width:100%;padding:14px;font-size:16px">
+              Place Order
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    &copy; 2024 Cards & Smoke Shop. All rights reserved.
+  </footer>
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div id="modal" class="modal"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="database.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+  <script src="checkout.js"></script>
+</body>
+</html>
+

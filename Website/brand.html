@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover" />
+  <title>Brand</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="site-title">CRADS &amp; SMOKE</div>
+        <div class="site-sub">Premium Smoke &amp; Vape Store</div>
+      </div>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="admin.html">Admin Panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="brandHero" class="hero" style="padding:20px">
+      <h1 id="brandTitle">Brand</h1>
+      <p id="brandDescription" class="text-muted">Description</p>
+    </section>
+
+    <section>
+      <div id="productsGrid" class="products-grid"></div>
+    </section>
+  </main>
+
+  <footer class="footer">&copy; 2024 Crads and Smoke Shop</footer>
+
+  <!-- Scripts -->
+  <script src="database.js"></script>
+  
+  <!-- Main Script -->
+  <script src="script.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', ()=> loadBrandProducts())</script>
+</body>
+</html>

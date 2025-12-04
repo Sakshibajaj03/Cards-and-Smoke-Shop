@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover" />
+  <title>Order Confirmed - Cards & Smoke Shop</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header" role="banner">
+    <div class="header-inner">
+      <div class="brand">
+        <a href="index.html" style="text-decoration:none;color:inherit">
+          <div class="site-title">CARDS & SMOKE</div>
+          <div class="site-sub">Premium E-commerce Store</div>
+        </a>
+      </div>
+      <nav class="nav" role="navigation" aria-label="Main">
+        <a href="index.html">Shop</a>
+        <a href="cart.html" style="position:relative">
+          Cart <span class="cart-badge" style="display:none">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div style="max-width:600px;margin:60px auto;text-align:center">
+      <div style="width:80px;height:80px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px">
+        <span style="font-size:48px;color:white">✓</span>
+      </div>
+      <h1 style="font-size:28px;font-family:'Playfair Display',serif;margin-bottom:12px">Order Confirmed!</h1>
+      <p class="text-muted" style="font-size:16px;margin-bottom:32px">
+        Thank you for your order. We've received your order and will begin processing it right away.
+      </p>
+      
+      <div class="panel" style="text-align:left;margin-bottom:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h2 style="font-size:18px">Order Details</h2>
+          <span id="orderNumber" style="font-weight:600;color:var(--accent)"></span>
+        </div>
+        <div id="orderDetails">
+          <!-- Order details will be loaded here -->
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:12px;justify-content:center">
+        <a href="index.html" class="btn">Continue Shopping</a>
+        <a href="admin.html" class="btn secondary">View Orders (Admin)</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    &copy; 2024 Cards & Smoke Shop. All rights reserved.
+  </footer>
+
+  <!-- Scripts -->
+  <script src="database.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderNumber = params.get('orderNumber');
+    if (orderNumber) {
+      document.getElementById('orderNumber').textContent = orderNumber;
+    }
+    document.getElementById('orderDetails').innerHTML = `
+      <p class="text-muted" style="margin-bottom:8px">We'll send you an email confirmation shortly.</p>
+      <p class="text-muted">You can track your order status in the admin panel.</p>
+    `;
+  </script>
+</body>
+</html>
+

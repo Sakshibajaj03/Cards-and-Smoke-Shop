@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes,viewport-fit=cover" />
+  <title>Product - Cards & Smoke Shop</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header" role="banner">
+    <div class="header-inner">
+      <div class="brand">
+        <a href="index.html" style="text-decoration:none;color:inherit">
+          <div class="site-title">CARDS & SMOKE</div>
+          <div class="site-sub">Premium E-commerce Store</div>
+        </a>
+      </div>
+      <nav class="nav" role="navigation" aria-label="Main">
+        <a href="index.html">Shop</a>
+        <a href="cart.html" style="position:relative">
+          Cart <span class="cart-badge" style="display:none">0</span>
+        </a>
+        <div id="userMenu">
+          <button class="btn" onclick="showLoginModal()" style="padding:6px 12px;font-size:12px">Login</button>
+        </div>
+        <a href="admin.html" class="btn secondary" style="padding:6px 12px;font-size:12px">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div style="margin-bottom:16px">
+      <a href="index.html" style="color:var(--accent);text-decoration:none;font-size:14px">← Back to Shop</a>
+    </div>
+
+
+    <div id="productContainer" style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px">
+      <!-- Product will be loaded here -->
+    </div>
+
+    <!-- Related Products -->
+    <section id="relatedProducts" style="margin-top:48px">
+      <h2 style="font-size:20px;margin-bottom:20px">Related Products</h2>
+      <div id="relatedGrid" class="products-grid"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    &copy; 2024 Cards & Smoke Shop. All rights reserved.
+  </footer>
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div id="modal" class="modal"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="database.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+  <script src="product-detail.js"></script>
+</body>
+</html>
+
