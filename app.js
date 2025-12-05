@@ -250,3 +250,203 @@ function stopUpdateMessageInterval() {
   }
 }
 
+// Admin PIN Modal Functions
+const ADMIN_PIN = '1122';
+
+function openAdminPinModal(event) {
+  if (event) {
+    event.preventDefault();
+  }
+  
+  // Create PIN modal HTML
+  const pinModalHTML = `
+    <div class="pin-modal" id="adminPinModal">
+      <div class="pin-modal-content">
+        <div class="pin-modal-header">
+          <h2 class="pin-modal-title">🔐 Admin Access</h2>
+          <p class="pin-modal-subtitle">Enter 4-digit PIN to continue</p>
+        </div>
+        <div class="pin-input-container" id="pinInputContainer">
+          <input type="text" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="0" />
+          <input type="text" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="1" />
+          <input type="text" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="2" />
+          <input type="text" class="pin-input" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="3" />
+        </div>
+        <div class="pin-error-message" id="pinErrorMessage"></div>
+        <div class="pin-modal-actions">
+          <button class="pin-btn pin-btn-primary" onclick="verifyAdminPin()">Verify</button>
+          <button class="pin-btn pin-btn-secondary" onclick="closeAdminPinModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add modal to body
+  document.body.insertAdjacentHTML('beforeend', pinModalHTML);
+  
+  // Show modal with animation
+  setTimeout(() => {
+    const modal = document.getElementById('adminPinModal');
+    if (modal) {
+      modal.classList.add('show');
+      // Focus first input
+      const firstInput = modal.querySelector('.pin-input[data-index="0"]');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }
+  }, 10);
+  
+  // Setup PIN input handlers
+  setupPinInputs();
+}
+
+function setupPinInputs() {
+  const inputs = document.querySelectorAll('.pin-input');
+  
+  inputs.forEach((input, index) => {
+    // Handle input
+    input.addEventListener('input', (e) => {
+      const value = e.target.value.replace(/[^0-9]/g, '');
+      e.target.value = value;
+      
+      if (value) {
+        e.target.classList.add('filled');
+        // Move to next input
+        if (index < inputs.length - 1) {
+          inputs[index + 1].focus();
+        }
+      } else {
+        e.target.classList.remove('filled');
+      }
+      
+      // Clear error on input
+      const errorMsg = document.getElementById('pinErrorMessage');
+      if (errorMsg) {
+        errorMsg.textContent = '';
+        errorMsg.classList.remove('show');
+      }
+    });
+    
+    // Handle backspace
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && index > 0) {
+        inputs[index - 1].focus();
+        inputs[index - 1].value = '';
+        inputs[index - 1].classList.remove('filled');
+      }
+    });
+    
+    // Handle paste
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 4);
+      pastedData.split('').forEach((char, i) => {
+        if (inputs[index + i]) {
+          inputs[index + i].value = char;
+          inputs[index + i].classList.add('filled');
+        }
+      });
+      // Focus last filled input or verify button
+      const lastFilledIndex = Math.min(index + pastedData.length - 1, inputs.length - 1);
+      if (inputs[lastFilledIndex]) {
+        inputs[lastFilledIndex].focus();
+      }
+    });
+  });
+  
+  // Handle Enter and Escape keys (only if modal exists)
+  if (!window.pinModalKeyHandler) {
+    window.pinModalKeyHandler = (e) => {
+      const modal = document.getElementById('adminPinModal');
+      if (!modal) return;
+      
+      if (e.key === 'Enter') {
+        verifyAdminPin();
+      } else if (e.key === 'Escape') {
+        closeAdminPinModal();
+      }
+    };
+    document.addEventListener('keydown', window.pinModalKeyHandler);
+  }
+}
+
+function verifyAdminPin() {
+  const inputs = document.querySelectorAll('.pin-input');
+  const enteredPin = Array.from(inputs).map(input => input.value).join('');
+  const errorMsg = document.getElementById('pinErrorMessage');
+  
+  if (enteredPin.length !== 4) {
+    if (errorMsg) {
+      errorMsg.textContent = 'Please enter all 4 digits';
+      errorMsg.classList.add('show');
+    }
+    // Shake animation
+    inputs.forEach(input => {
+      input.classList.add('error');
+      setTimeout(() => input.classList.remove('error'), 500);
+    });
+    return;
+  }
+  
+  if (enteredPin === ADMIN_PIN) {
+    // Success - redirect to admin page
+    inputs.forEach(input => {
+      input.classList.remove('error');
+      input.style.borderColor = 'var(--success)';
+      input.style.background = 'rgba(16, 185, 129, 0.1)';
+    });
+    
+    // Show success message briefly
+    if (errorMsg) {
+      errorMsg.textContent = '✓ Access granted!';
+      errorMsg.style.color = 'var(--success)';
+      errorMsg.classList.add('show');
+    }
+    
+    // Redirect after short delay
+    setTimeout(() => {
+      window.location.href = 'admin.html';
+    }, 500);
+  } else {
+    // Wrong PIN
+    inputs.forEach(input => {
+      input.classList.add('error');
+      input.value = '';
+      input.classList.remove('filled');
+    });
+    
+    if (errorMsg) {
+      errorMsg.textContent = '✗ Incorrect PIN. Please try again.';
+      errorMsg.style.color = 'var(--error)';
+      errorMsg.classList.add('show');
+    }
+    
+    // Focus first input
+    inputs[0].focus();
+    
+    // Remove error class after animation
+    setTimeout(() => {
+      inputs.forEach(input => input.classList.remove('error'));
+    }, 500);
+  }
+}
+
+function closeAdminPinModal() {
+  const modal = document.getElementById('adminPinModal');
+  if (modal) {
+    modal.classList.remove('show');
+    setTimeout(() => {
+      modal.remove();
+    }, 300);
+  }
+}
+
+// Close modal on backdrop click
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('adminPinModal');
+  if (modal && e.target === modal) {
+    closeAdminPinModal();
+  }
+});
+

@@ -1612,7 +1612,7 @@ textarea.input-edit {
   background: #1e40af;
 }
 
-/* POS Connectivity Coming Soon Page - Static Design */
+/* POS Connectivity Coming Soon Page - Animated Design */
 .pos-coming-soon-container-static {
   text-align: center;
   padding: 48px 32px;
@@ -1621,16 +1621,82 @@ textarea.input-edit {
   border-radius: 16px;
   margin: 24px 0;
   box-shadow: var(--shadow-md);
+  animation: fadeInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.pos-coming-soon-container-static::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 
 .pos-header-static {
   margin-bottom: 40px;
+  animation: slideInDown 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .pos-icon-static {
   font-size: 72px;
   margin-bottom: 20px;
   display: block;
+  animation: pulse 2s ease-in-out infinite, float 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .pos-title-static {
@@ -1638,6 +1704,20 @@ textarea.input-edit {
   font-weight: 700;
   color: var(--text);
   margin: 0 0 8px 0;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: fadeIn 0.8s ease-out 0.2s both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .pos-subtitle-static {
@@ -1645,6 +1725,26 @@ textarea.input-edit {
   font-weight: 600;
   color: var(--muted);
   margin: 0;
+  animation: fadeIn 0.8s ease-out 0.4s both;
+  position: relative;
+  display: inline-block;
+}
+
+.pos-subtitle-static::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--gradient-primary);
+  animation: expandWidth 1s ease-out 0.8s forwards;
+}
+
+@keyframes expandWidth {
+  to {
+    width: 100%;
+  }
 }
 
 .pos-message-box-static {
@@ -1655,6 +1755,26 @@ textarea.input-edit {
   margin: 0 auto 32px;
   max-width: 600px;
   box-shadow: var(--shadow-sm);
+  animation: fadeInUp 0.8s ease-out 0.6s both;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.pos-message-box-static:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .pos-message-static {
@@ -1662,6 +1782,7 @@ textarea.input-edit {
   color: var(--text);
   line-height: 1.7;
   margin: 0 0 24px 0;
+  animation: fadeIn 0.6s ease-out 0.8s both;
 }
 
 .pos-features-list-static {
@@ -1684,6 +1805,56 @@ textarea.input-edit {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
+  opacity: 0;
+  transform: translateX(-20px);
+  animation: slideInLeft 0.5s ease-out forwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.pos-feature-item-static::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.pos-feature-item-static:hover::before {
+  left: 100%;
+}
+
+.pos-feature-item-static:nth-child(1) {
+  animation-delay: 1s;
+}
+
+.pos-feature-item-static:nth-child(2) {
+  animation-delay: 1.2s;
+}
+
+.pos-feature-item-static:nth-child(3) {
+  animation-delay: 1.4s;
+}
+
+.pos-feature-item-static:nth-child(4) {
+  animation-delay: 1.6s;
+}
+
+.pos-feature-item-static:hover {
+  transform: translateX(8px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  border-left-width: 6px;
+}
+
+@keyframes slideInLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .pos-feature-item-static:last-child {
@@ -1693,11 +1864,26 @@ textarea.input-edit {
 .pos-feature-icon-static {
   font-size: 22px;
   display: inline-block;
+  animation: rotate 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes rotate {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
 }
 
 .pos-status-static {
   max-width: 500px;
   margin: 0 auto;
+  animation: fadeIn 0.8s ease-out 1.8s both;
 }
 
 .pos-status-bar-static {
@@ -1708,13 +1894,52 @@ textarea.input-edit {
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 12px;
+  position: relative;
 }
 
 .pos-status-fill-static {
   height: 100%;
-  background: var(--accent);
+  background: var(--gradient-primary);
   border-radius: 999px;
-  width: 65%;
+  width: 0;
+  animation: progressFill 2s ease-out 2s forwards, pulseGlow 2s ease-in-out 4s infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.pos-status-fill-static::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmerProgress 2s ease-in-out infinite;
+}
+
+@keyframes progressFill {
+  to {
+    width: 65%;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0);
+  }
+}
+
+@keyframes shimmerProgress {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 
 .pos-status-text-static {
@@ -1722,9 +1947,10 @@ textarea.input-edit {
   color: var(--muted);
   font-weight: 600;
   margin: 0;
+  animation: fadeIn 0.6s ease-out 2.2s both;
 }
 
-/* Responsive POS Page - Static */
+/* Responsive POS Page - Animated */
 @media (max-width: 768px) {
   .pos-coming-soon-container-static {
     padding: 32px 20px;
@@ -1752,6 +1978,12 @@ textarea.input-edit {
     padding: 12px;
     font-size: 14px;
   }
+  
+  /* Maintain animations on mobile */
+  .pos-feature-item-static:hover {
+    transform: translateX(4px);
+  }
+}
   
   .feature-coming-soon-modal {
     max-width: 95%;
@@ -2384,9 +2616,234 @@ textarea.input-edit {
   }
 }
 
+/* Admin PIN Modal */
+.pin-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pin-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pin-modal-content {
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 40px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: var(--shadow-xl);
+  border: 2px solid var(--border);
+  position: relative;
+  transform: scale(0.9) translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.pin-modal.show .pin-modal-content {
+  transform: scale(1) translateY(0);
+}
+
+.pin-modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.pin-modal-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.pin-modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pin-modal-subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.pin-input-container {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.pin-input {
+  width: 60px;
+  height: 70px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  caret-color: transparent;
+}
+
+.pin-input:focus {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  transform: scale(1.05);
+}
+
+.pin-input.filled {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.pin-input.error {
+  border-color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.pin-error-message {
+  text-align: center;
+  color: var(--error);
+  font-size: 13px;
+  margin-bottom: 20px;
+  min-height: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pin-error-message.show {
+  opacity: 1;
+}
+
+.pin-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.pin-btn {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.pin-btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.pin-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.pin-btn-primary:active {
+  transform: translateY(0);
+}
+
+.pin-btn-secondary {
+  background: var(--card);
+  color: var(--text);
+  border: 2px solid var(--border);
+}
+
+.pin-btn-secondary:hover {
+  background: var(--border);
+  transform: translateY(-2px);
+}
+
+.pin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Responsive PIN Modal */
+@media (max-width: 600px) {
+  .pin-modal-content {
+    padding: 32px 24px;
+  }
+  
+  .pin-input {
+    width: 50px;
+    height: 60px;
+    font-size: 24px;
+  }
+  
+  .pin-modal-title {
+    font-size: 20px;
+  }
+  
+  .pin-input-container {
+    gap: 8px;
+  }
+}
+
 /* Print Styles */
 @media print{
-  .header,.nav,.footer,.update-message-box,.modal-backdrop,.copyright-popup{display:none}
+  .header,.nav,.footer,.update-message-box,.modal-backdrop,.copyright-popup,.pin-modal{display:none}
   .container{margin-top:0;max-width:100%}
   .product-card{border:1px solid #000;page-break-inside:avoid}
 }
