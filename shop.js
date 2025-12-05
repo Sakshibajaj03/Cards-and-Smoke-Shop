@@ -338,8 +338,47 @@ async function addToCartFromShop(productId) {
   }
 }
 
+// Review Modal Functions - Coming Soon
+function openReviewModal() {
+  openModal(`
+    <div class="coming-soon-modal">
+      <div class="coming-soon-header">
+        <div class="coming-soon-icon-wrapper">
+          <span class="coming-soon-icon">⭐</span>
+        </div>
+        <h3 class="coming-soon-title">Customer Review</h3>
+      </div>
+      <div class="coming-soon-content">
+        <div class="coming-soon-message">
+          <p class="coming-soon-text">Coming Soon</p>
+          <p class="coming-soon-subtext">We're working on something amazing! The review feature will be available soon.</p>
+        </div>
+        <div class="coming-soon-actions">
+          <button type="button" class="btn" onclick="closeModal()">Got it</button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   loadShopPage();
+  
+  // Setup real-time listener for sub-brands to update dropdowns
+  setupSubBrandsListener((subBrands) => {
+    allSubBrands = subBrands;
+    renderBrands(); // Re-render brands to update sub-brand dropdowns
+    renderProducts(); // Re-render products to update sub-brand names
+    applyFilters(); // Re-apply filters
+  });
+  
+  // Setup real-time listener for brands
+  setupBrandsListener((brands) => {
+    allBrands = brands;
+    renderBrands(); // Re-render brands when they change
+    renderProducts(); // Re-render products to update brand names
+    applyFilters(); // Re-apply filters
+  });
 });
 

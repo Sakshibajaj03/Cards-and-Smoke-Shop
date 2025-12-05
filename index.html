@@ -68,6 +68,12 @@
     </section>
   </main>
 
+  <!-- Floating Review Button -->
+  <button class="floating-review-btn" onclick="openReviewModal()" title="Leave a Review">
+    <span class="review-btn-icon">⭐</span>
+    <span class="review-btn-text">Review</span>
+  </button>
+
   <footer class="footer">
     <div style="max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;text-align:left;margin-bottom:24px">
       <div>
@@ -89,7 +95,7 @@
       </div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:20px;text-align:center">
-      &copy; 2024 Cards & Smoke Shop. All rights reserved.
+      &copy; 2025 Cards & Smoke Shop. All rights reserved.
     </div>
   </footer>
 
@@ -98,11 +104,21 @@
     <div class="update-message-content">
       <button class="update-message-close" onclick="closeUpdateMessage()" aria-label="Close">×</button>
       <div style="padding-right:32px">
-        <h4 style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--accent)">🚀 Site Update</h4>
+        <h4 style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--accent);display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px">🚀</span>
+          <span>Site Update</span>
+        </h4>
         <p style="font-size:13px;color:var(--text);line-height:1.5;margin:0">
           We are updating our site and moving to an e-commerce platform. Stay tuned for exciting new features!
         </p>
       </div>
+    </div>
+  </div>
+
+  <!-- Copyright Popup -->
+  <div id="copyrightPopup" class="copyright-popup">
+    <div class="copyright-popup-content">
+      <p class="copyright-popup-message">© 2025 Cards & Smoke Shop. All rights reserved.</p>
     </div>
   </div>
 

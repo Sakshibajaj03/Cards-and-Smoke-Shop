@@ -7,6 +7,7 @@ const COLLECTIONS = {
   BRANDS: 'localDB_brands',
   SUB_BRANDS: 'localDB_subBrands',
   USERS: 'localDB_users',
+  REVIEWS: 'localDB_reviews',
   CART: 'cart'
 };
 
@@ -521,6 +522,59 @@ function getCartTotal() {
 function getCartItemCount() {
   const cart = getCart();
   return cart.reduce((count, item) => count + item.quantity, 0);
+}
+
+/* ========== REVIEWS ========== */
+async function addReview(reviewData) {
+  try {
+    const reviews = getCollection(COLLECTIONS.REVIEWS);
+    const review = {
+      id: generateId(),
+      name: reviewData.name || '',
+      email: reviewData.email || '',
+      rating: reviewData.rating || null,
+      comment: reviewData.comment || '',
+      status: 'pending', // pending, approved, rejected
+      createdAt: getTimestamp()
+    };
+    reviews.push(review);
+    saveCollection(COLLECTIONS.REVIEWS, reviews);
+    return review.id;
+  } catch (error) {
+    console.error("Error adding review:", error);
+    throw error;
+  }
+}
+
+async function getAllReviews() {
+  try {
+    return getCollection(COLLECTIONS.REVIEWS);
+  } catch (error) {
+    console.error("Error getting reviews:", error);
+    return [];
+  }
+}
+
+async function getApprovedReviews() {
+  try {
+    const reviews = getCollection(COLLECTIONS.REVIEWS);
+    return reviews.filter(r => r.status === 'approved');
+  } catch (error) {
+    console.error("Error getting approved reviews:", error);
+    return [];
+  }
+}
+
+async function deleteReview(reviewId) {
+  try {
+    const reviews = getCollection(COLLECTIONS.REVIEWS);
+    const filtered = reviews.filter(r => r.id !== reviewId);
+    saveCollection(COLLECTIONS.REVIEWS, filtered);
+    return true;
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    throw error;
+  }
 }
 
 /* ========== REAL-TIME LISTENERS (using custom events) ========== */

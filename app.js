@@ -146,8 +146,38 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize update message box (only on shop page, not admin)
   if (window.location.pathname.includes('index.html') || (window.location.pathname === '/' || window.location.pathname.endsWith('/'))) {
     startUpdateMessageInterval();
+    // Show copyright popup when website opens
+    showCopyrightPopup();
   }
 });
+
+// Copyright Popup Functions
+function showCopyrightPopup() {
+  const popup = document.getElementById('copyrightPopup');
+  if (popup) {
+    // Show after a short delay
+    setTimeout(() => {
+      popup.classList.add('show');
+    }, 300);
+    
+    // Auto close after 7 seconds
+    setTimeout(() => {
+      closeCopyrightPopup();
+    }, 7300); // 300ms delay + 7000ms display time
+  }
+}
+
+function closeCopyrightPopup() {
+  const popup = document.getElementById('copyrightPopup');
+  if (popup && popup.classList.contains('show')) {
+    popup.classList.remove('show');
+    popup.classList.add('hide');
+    setTimeout(() => {
+      popup.style.display = 'none';
+      popup.classList.remove('hide');
+    }, 400);
+  }
+}
 
 // Update Message Box Functions
 let updateMessageInterval = null;
@@ -172,8 +202,8 @@ function showUpdateMessage() {
   }
   
   // Show the message box
+  messageBox.classList.remove('hidden');
   messageBox.classList.add('show');
-  messageBox.style.animation = 'slideInRight 0.4s ease-out';
   
   // Auto-hide after 10 seconds
   clearTimeout(updateMessageTimeout);
@@ -186,11 +216,8 @@ function closeUpdateMessage() {
   const messageBox = document.getElementById('updateMessageBox');
   if (!messageBox) return;
   
-  messageBox.style.animation = 'slideOutRight 0.4s ease-out';
-  setTimeout(() => {
     messageBox.classList.remove('show');
-    messageBox.style.animation = '';
-  }, 400);
+  messageBox.classList.add('hidden');
 }
 
 function startUpdateMessageInterval() {

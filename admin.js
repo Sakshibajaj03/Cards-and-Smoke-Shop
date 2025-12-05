@@ -46,6 +46,8 @@ function switchAdminTab(tab, event) {
     loadAdminBrands();
   } else if (tab === 'subBrands') {
     loadAdminSubBrands();
+  } else if (tab === 'reviews') {
+    loadAdminReviews();
   } else if (tab === 'pos') {
     // POS connectivity coming soon - static page
   }
@@ -750,7 +752,8 @@ function openDeleteConfirmationModal(type, id, name) {
   const typeLabels = {
     'product': { title: 'Delete Product', icon: '🗑️', message: 'Are you sure you want to delete this product?', warning: 'This action cannot be undone. The product will be permanently removed from your store.' },
     'brand': { title: 'Delete Brand', icon: '🏷️', message: 'Are you sure you want to delete this brand?', warning: 'Products in this brand will become unbranded. This action cannot be undone.' },
-    'subBrand': { title: 'Delete Sub-Brand', icon: '📦', message: 'Are you sure you want to delete this sub-brand?', warning: 'Products in this sub-brand will have their sub-brand removed. This action cannot be undone.' }
+    'subBrand': { title: 'Delete Sub-Brand', icon: '📦', message: 'Are you sure you want to delete this sub-brand?', warning: 'Products in this sub-brand will have their sub-brand removed. This action cannot be undone.' },
+    'review': { title: 'Delete Review', icon: '⭐', message: 'Are you sure you want to delete this review?', warning: 'This action cannot be undone. The review will be permanently removed.' }
   };
   
   const config = typeLabels[type] || typeLabels['product'];
@@ -807,6 +810,10 @@ async function confirmDelete() {
       await deleteSubBrand(id);
       showNotification('Sub-brand deleted successfully');
       await loadAdminSubBrands();
+    } else if (type === 'review') {
+      await deleteReview(id);
+      showNotification('Review deleted successfully');
+      await loadAdminReviews();
     }
   } catch (error) {
     showNotification(`Failed to delete ${type}`, 'error');
@@ -1273,22 +1280,23 @@ async function deleteSubBrandConfirm(subBrandId) {
   openDeleteConfirmationModal('subBrand', subBrandId, subBrandName);
 }
 
-// Feature Coming Soon Message
+// Feature Coming Soon Message - Static Design
 function showFeatureComingSoon(featureName) {
   openModal(`
-    <div class="delete-confirmation-modal" style="max-width:400px">
-      <div class="delete-confirmation-header">
-        <div class="delete-confirmation-icon" style="font-size:56px;color:#3b82f6">⏳</div>
-        <h3 class="delete-confirmation-title" style="background:linear-gradient(135deg, #3b82f6, #2563eb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Feature Coming Soon</h3>
-        <p class="delete-confirmation-message">The ${featureName} feature is currently under development and will be available soon!</p>
+    <div class="feature-coming-soon-modal">
+      <div class="feature-coming-soon-header">
+        <div class="feature-coming-soon-icon">⏳</div>
+        <h3 class="feature-coming-soon-title">Feature Coming Soon</h3>
       </div>
-      <div class="delete-confirmation-warning" style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.05));border-left-color:#3b82f6;color:#1e40af">
-        ✨ We're working hard to bring you this feature. Stay tuned for updates!
+      <div class="feature-coming-soon-body">
+        <p class="feature-coming-soon-message">The <span class="feature-name-highlight">${escapeHtml(featureName)}</span> feature is currently under development and will be available soon!</p>
+        <div class="feature-coming-soon-info-box">
+          <span class="feature-info-icon">✨</span>
+          <span class="feature-info-text">We're working hard to bring you this feature. Stay tuned for updates!</span>
+        </div>
       </div>
-      <div class="delete-confirmation-actions">
-        <button class="delete-confirmation-btn delete-confirmation-btn-cancel" onclick="closeModal()" style="width:100%">
-          Close
-        </button>
+      <div class="feature-coming-soon-footer">
+        <button class="feature-close-btn" onclick="closeModal()">Close</button>
       </div>
     </div>
   `);
@@ -1635,6 +1643,100 @@ async function importProductsFromData(jsonData) {
   }
 }
 */ // End of commented importProductsFromData function
+
+// Reviews Management
+let allReviews = [];
+let filteredReviews = [];
+
+async function loadAdminReviews() {
+  try {
+    allReviews = await getAllReviews();
+    filteredReviews = allReviews;
+    renderAdminReviews();
+  } catch (error) {
+    console.error("Error loading reviews:", error);
+  }
+}
+
+function renderAdminReviews() {
+  const container = document.getElementById('reviewsList');
+  if (!container) return;
+  
+  if (filteredReviews.length === 0) {
+    container.innerHTML = '<p class="text-muted" style="text-align:center;padding:40px">No reviews found</p>';
+    return;
+  }
+  
+  container.innerHTML = filteredReviews.map(review => {
+    const date = review.createdAt ? formatDate(review.createdAt) : 'N/A';
+    const statusClass = review.status === 'approved' ? 'status-approved' : 
+                        review.status === 'rejected' ? 'status-rejected' : 'status-pending';
+    const ratingStars = review.rating ? '⭐'.repeat(review.rating) : 'No rating';
+    
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;background:var(--card)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:12px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+              <div style="font-weight:600;font-size:16px">${escapeHtml(review.name || 'Anonymous')}</div>
+              <span class="status-badge ${statusClass}">${review.status}</span>
+            </div>
+            ${review.email ? `<div class="text-muted" style="font-size:13px;margin-bottom:4px">${escapeHtml(review.email)}</div>` : ''}
+            ${review.rating ? `<div style="font-size:14px;margin-bottom:4px">${ratingStars}</div>` : ''}
+            <div class="text-muted" style="font-size:12px">${date}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${review.status === 'pending' ? `
+              <button class="btn secondary" onclick="updateReviewStatus('${review.id}', 'approved')" style="font-size:12px;padding:6px 12px;background:#10b981;color:#fff;border-color:#10b981">Approve</button>
+              <button class="btn secondary" onclick="updateReviewStatus('${review.id}', 'rejected')" style="font-size:12px;padding:6px 12px;background:#ef4444;color:#fff;border-color:#ef4444">Reject</button>
+            ` : ''}
+            <button class="icon-btn" onclick="deleteReviewAdmin('${review.id}')" style="padding:6px 12px;font-size:12px;color:#ef4444">Delete</button>
+          </div>
+        </div>
+        ${review.comment ? `<div style="padding:12px;background:#f9fafb;border-radius:6px;margin-top:12px;font-size:14px;line-height:1.6;color:var(--text)">${escapeHtml(review.comment)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function filterAdminReviews() {
+  const statusFilter = document.getElementById('reviewStatusFilter')?.value || '';
+  
+  if (statusFilter) {
+    filteredReviews = allReviews.filter(r => r.status === statusFilter);
+  } else {
+    filteredReviews = allReviews;
+  }
+  
+  renderAdminReviews();
+}
+
+async function updateReviewStatus(reviewId, status) {
+  try {
+    const reviews = await getAllReviews();
+    const reviewIndex = reviews.findIndex(r => r.id === reviewId);
+    
+    if (reviewIndex !== -1) {
+      reviews[reviewIndex].status = status;
+      reviews[reviewIndex].updatedAt = new Date();
+      
+      const COLLECTIONS = { REVIEWS: 'localDB_reviews' };
+      saveCollection(COLLECTIONS.REVIEWS, reviews);
+      
+      showNotification(`Review ${status} successfully`);
+      await loadAdminReviews();
+    }
+  } catch (error) {
+    console.error('Error updating review status:', error);
+    showNotification('Failed to update review status', 'error');
+  }
+}
+
+async function deleteReviewAdmin(reviewId) {
+  const review = allReviews.find(r => r.id === reviewId);
+  const reviewName = review ? (review.name || 'Anonymous') : '';
+  openDeleteConfirmationModal('review', reviewId, reviewName);
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {

@@ -212,3 +212,8 @@ Double-click this file to start the server!
 - For shared data, you'll need a backend server (not included in this setup)
 - Make sure to test on actual devices, not just browser emulators
 
+
+
+
+
+

@@ -31,6 +31,7 @@
       <button class="admin-tab" onclick="switchAdminTab('orders', event)">Orders</button>
       <button class="admin-tab" onclick="switchAdminTab('brands', event)">Brands</button>
       <button class="admin-tab" onclick="switchAdminTab('subBrands', event)">Sub-Brands</button>
+      <button class="admin-tab" onclick="switchAdminTab('reviews', event)">Reviews</button>
       <button class="admin-tab" onclick="switchAdminTab('pos', event)">Connect with Your POS</button>
     </div>
 
@@ -213,50 +214,68 @@
       </div>
     </div>
 
+    <!-- Reviews Tab -->
+    <div id="reviewsTab" class="admin-tab-content" style="display:none">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <h2 style="font-size:18px">Customer Reviews</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="reviewStatusFilter" class="input" style="width:180px" onchange="filterAdminReviews()">
+              <option value="">All Reviews</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+        
+        <div id="reviewsList">
+          <!-- Reviews will be loaded here -->
+        </div>
+      </div>
+    </div>
+
     <!-- POS Connectivity Tab -->
     <div id="posTab" class="admin-tab-content" style="display:none">
-      <div class="pos-coming-soon-container">
-        <div class="pos-icon-wrapper">
-          <div class="pos-icon-main">💳</div>
-          <div class="pos-icon-orb pos-orb-1"></div>
-          <div class="pos-icon-orb pos-orb-2"></div>
-          <div class="pos-icon-orb pos-orb-3"></div>
+      <div class="pos-coming-soon-container-static">
+        <div class="pos-header-static">
+          <div class="pos-icon-static">💳</div>
+          <h2 class="pos-title-static">POS Connectivity</h2>
+          <p class="pos-subtitle-static">Coming Soon</p>
         </div>
-        <h2 class="pos-title">POS Connectivity</h2>
-        <p class="pos-subtitle">Coming Soon</p>
-        <div class="pos-message-box">
-          <p class="pos-message">We're working on integrating your Point of Sale system with our platform. This feature will allow you to:</p>
-          <ul class="pos-features-list">
-            <li class="pos-feature-item">
-              <span class="pos-feature-icon">🔄</span>
+        <div class="pos-message-box-static">
+          <p class="pos-message-static">We're working on integrating your Point of Sale system with our platform. This feature will allow you to:</p>
+          <ul class="pos-features-list-static">
+            <li class="pos-feature-item-static">
+              <span class="pos-feature-icon-static">🔄</span>
               <span>Sync inventory in real-time</span>
             </li>
-            <li class="pos-feature-item">
-              <span class="pos-feature-icon">📊</span>
+            <li class="pos-feature-item-static">
+              <span class="pos-feature-icon-static">📊</span>
               <span>Track sales and analytics</span>
             </li>
-            <li class="pos-feature-item">
-              <span class="pos-feature-icon">💰</span>
+            <li class="pos-feature-item-static">
+              <span class="pos-feature-icon-static">💰</span>
               <span>Manage transactions seamlessly</span>
             </li>
-            <li class="pos-feature-item">
-              <span class="pos-feature-icon">📱</span>
+            <li class="pos-feature-item-static">
+              <span class="pos-feature-icon-static">📱</span>
               <span>Access from any device</span>
             </li>
           </ul>
         </div>
-        <div class="pos-progress-container">
-          <div class="pos-progress-bar">
-            <div class="pos-progress-fill"></div>
+        <div class="pos-status-static">
+          <div class="pos-status-bar-static">
+            <div class="pos-status-fill-static"></div>
           </div>
-          <p class="pos-progress-text">Development in progress...</p>
+          <p class="pos-status-text-static">Development in progress...</p>
         </div>
       </div>
     </div>
   </main>
 
   <footer class="footer">
-    &copy; 2024 Cards & Smoke Shop. All rights reserved.
+    &copy; 2025 Cards & Smoke Shop. All rights reserved.
   </footer>
 
   <!-- Modal -->
