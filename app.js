@@ -22,15 +22,44 @@ function initializeData() {
     if (!localStorage.getItem(STORAGE_KEYS.FLAVORS)) {
         localStorage.setItem(STORAGE_KEYS.FLAVORS, JSON.stringify(['Vanilla', 'Chocolate', 'Strawberry']));
     }
+    
+    // Initialize slider images - check data file first, then localStorage, then defaults
     if (!localStorage.getItem(STORAGE_KEYS.SLIDER_IMAGES)) {
-        localStorage.setItem(STORAGE_KEYS.SLIDER_IMAGES, JSON.stringify([
-            'https://via.placeholder.com/1200x400/4A90E2/FFFFFF?text=Slide+1',
-            'https://via.placeholder.com/1200x400/E94B3C/FFFFFF?text=Slide+2',
-            'https://via.placeholder.com/1200x400/50C878/FFFFFF?text=Slide+3',
-            'https://via.placeholder.com/1200x400/FF6B6B/FFFFFF?text=Slide+4',
-            'https://via.placeholder.com/1200x400/9B59B6/FFFFFF?text=Slide+5'
-        ]));
+        // Try to get from data file if available
+        let sliderImages = [];
+        if (typeof window.getSliderImages === 'function') {
+            sliderImages = window.getSliderImages();
+        }
+        
+        // If no images from data file, use defaults
+        if (!sliderImages || sliderImages.length === 0 || !sliderImages.some(img => img && img.trim() !== '')) {
+            sliderImages = [
+                'https://via.placeholder.com/1200x400/4A90E2/FFFFFF?text=Slide+1',
+                'https://via.placeholder.com/1200x400/E94B3C/FFFFFF?text=Slide+2',
+                'https://via.placeholder.com/1200x400/50C878/FFFFFF?text=Slide+3',
+                'https://via.placeholder.com/1200x400/FF6B6B/FFFFFF?text=Slide+4',
+                'https://via.placeholder.com/1200x400/9B59B6/FFFFFF?text=Slide+5'
+            ];
+        }
+        
+        localStorage.setItem(STORAGE_KEYS.SLIDER_IMAGES, JSON.stringify(sliderImages));
+    } else {
+        // If localStorage exists, sync with data file if data file has images
+        if (typeof window.getSliderImages === 'function') {
+            const dataFileImages = window.getSliderImages();
+            if (dataFileImages && dataFileImages.length > 0 && dataFileImages.some(img => img && img.trim() !== '')) {
+                // Update localStorage with data file images (preserving any that exist in localStorage)
+                const currentImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.SLIDER_IMAGES) || '[]');
+                const merged = dataFileImages.map((dataImg, index) => {
+                    return (currentImages[index] && currentImages[index].trim() !== '') 
+                        ? currentImages[index] 
+                        : (dataImg || '');
+                });
+                localStorage.setItem(STORAGE_KEYS.SLIDER_IMAGES, JSON.stringify(merged));
+            }
+        }
     }
+    
     if (!localStorage.getItem(STORAGE_KEYS.CART)) {
         localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify([]));
     }
@@ -537,11 +566,21 @@ let currentSlide = 0;
 let slideInterval;
 
 function initSlider() {
-    const sliderImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.SLIDER_IMAGES) || '[]');
+    // Get slider images - check data file first, then localStorage
+    let sliderImages = [];
+    if (typeof window.getSliderImages === 'function') {
+        sliderImages = window.getSliderImages();
+    } else {
+        sliderImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.SLIDER_IMAGES) || '[]');
+    }
+    
     const sliderWrapper = document.getElementById('sliderWrapper');
     const sliderDots = document.getElementById('sliderDots');
     
     if (!sliderWrapper || !sliderDots) return;
+    
+    // Filter out empty images
+    sliderImages = sliderImages.filter(img => img && img.trim() !== '');
     
     if (!sliderImages || sliderImages.length === 0) {
         sliderWrapper.innerHTML = '<div class="slide active"><img src="https://via.placeholder.com/1200x450/667eea/ffffff?text=Add+Slider+Images+in+Admin+Panel" alt="No slider images" class="slide-image"></div>';

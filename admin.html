@@ -170,9 +170,19 @@
 
                 <!-- Slider Images Section -->
                 <section id="slider" class="admin-section">
-                    <div class="section-header">
-                        <h2><i class="fas fa-images"></i> Slider Images Management</h2>
-                        <p>Upload and manage your homepage slider images (5 images)</p>
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+                        <div style="flex: 1;">
+                            <h2><i class="fas fa-images"></i> Slider Images Management</h2>
+                            <p>Upload and manage your homepage slider images (5 images)</p>
+                        </div>
+                        <button onclick="generateSliderDataFile()" class="save-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap; min-width: 220px; padding: 12px 24px; font-size: 15px; font-weight: 600;">
+                            <i class="fas fa-download"></i> Update Slider Data File
+                        </button>
+                    </div>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">
+                            <i class="fas fa-info-circle"></i> <strong>Important:</strong> After uploading slider images, click "Update Slider Data File" above to make images persist when moving to another PC. Scroll down for more details.
+                        </p>
                     </div>
                     <div class="slider-images-admin">
                         <div class="slider-image-item" id="sliderImage1">
@@ -210,6 +220,31 @@
                             <input type="file" accept="image/*" class="image-upload" onchange="handleSliderImageUpload(5, this)">
                             <div class="image-preview" id="preview5"></div>
                         </div>
+                    </div>
+                    <div style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px solid #667eea; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);">
+                        <h3 style="margin-bottom: 15px; color: #667eea; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-database"></i> Persist Slider Images for Portability
+                        </h3>
+                        <p style="margin-bottom: 20px; color: #666; line-height: 1.8; font-size: 15px;">
+                            To make your slider images persist when moving the website to another PC, click the <strong>"Update Slider Data File"</strong> button at the top of this section. 
+                            This will generate a <code>slider-data.js</code> file that stores all slider images as embedded code, so they'll work even without localStorage or external image files.
+                        </p>
+                        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <h4 style="margin-bottom: 10px; color: #495057; font-size: 16px;"><i class="fas fa-list-ol"></i> Instructions:</h4>
+                            <ol style="margin: 0; padding-left: 20px; color: #666; line-height: 2;">
+                                <li>Upload your slider images using the file inputs above</li>
+                                <li>Click the <strong>"Update Slider Data File"</strong> button at the top</li>
+                                <li>The <code>slider-data.js</code> file will be downloaded automatically</li>
+                                <li>Replace the existing <code>slider-data.js</code> file in your website folder with the downloaded file</li>
+                                <li>Now your slider images will work on any PC!</li>
+                            </ol>
+                        </div>
+                        <button onclick="generateSliderDataFile()" class="save-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%; padding: 15px; font-size: 16px; font-weight: 600;">
+                            <i class="fas fa-download"></i> Generate & Download Slider Data File
+                        </button>
+                        <p style="margin-top: 15px; font-size: 13px; color: #888; text-align: center;">
+                            <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Do this after uploading all your slider images to ensure they're all included in the data file.
+                        </p>
                     </div>
                 </section>
 
