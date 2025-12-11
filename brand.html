@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Brand Products - Premium Store</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="light-colorful-theme">
+    <!-- Top Info Bar -->
+    <div class="top-info-bar">
+        <div class="container">
+            <div class="top-info-content">
+                <div class="top-info-left">
+                    <span><i class="fas fa-phone"></i> +1 (555) 123-4567</span>
+                    <span><i class="fas fa-envelope"></i> support@premiumvapeshop.com</span>
+                    <span><i class="fas fa-map-marker-alt"></i> Free Shipping Over $50</span>
+                </div>
+                <div class="top-info-right">
+                    <a href="login.html"><i class="fas fa-user-shield"></i> Admin</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-wrapper">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <i class="fas fa-smoking"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1 class="store-name" id="storeNameHeader">Premium Vape Shop</h1>
+                        <p class="store-tagline">Your Premium Vape Destination</p>
+                    </div>
+                </div>
+                
+                <div class="search-section">
+                    <form class="search-form" onsubmit="handleSearch(event)">
+                        <div class="search-wrapper">
+                            <input type="text" id="headerSearch" placeholder="Search products, brands..." class="search-input">
+                            <button type="submit" class="search-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="header-actions">
+                    <a href="cart.html" class="cart-button">
+                        <div class="cart-icon-wrapper">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="cart-count" id="cartCount">0</span>
+                        </div>
+                        <span class="cart-label">Cart</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Brand Header -->
+    <section class="brand-header-section">
+        <div class="container">
+            <div class="brand-header">
+                <button class="back-btn" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <div class="brand-title">
+                    <h1 id="brandTitle">Brand Products</h1>
+                    <p id="brandSubtitle">Explore sub-brands and products</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sub-Brands Section -->
+    <section class="sub-brands-section">
+        <div class="container">
+            <div class="section-header">
+                <h2><i class="fas fa-layer-group"></i> Sub-Brands</h2>
+                <p>Select a sub-brand to view products</p>
+            </div>
+            <div class="sub-brands-grid" id="subBrandsGrid">
+                <!-- Sub-brands will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="products-section brand-products-section" id="products">
+        <div class="container">
+            <div class="section-header-modern">
+                <div>
+                    <h2><i class="fas fa-box"></i> Products</h2>
+                    <p id="productsSubtitle">All products for this brand</p>
+                </div>
+            </div>
+            <div class="brand-products-container">
+                <div class="brand-products-grid" id="productsGrid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+            <div class="no-products" id="noProducts" style="display: none;">
+                <i class="fas fa-search"></i>
+                <p>No products found for this brand.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer-modern">
+        <div class="container">
+            <div class="footer-content-modern">
+                <div class="footer-section-modern">
+                    <h3><i class="fas fa-smoking"></i> <span id="footerStoreName">Premium Vape Shop</span></h3>
+                    <p>Your trusted destination for premium vape products. Quality you can trust, prices you'll love.</p>
+                    <div class="social-links-modern">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section-modern">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html"><i class="fas fa-home"></i> Home</a></li>
+                        <li><a href="index.html#products"><i class="fas fa-box"></i> Products</a></li>
+                        <li><a href="cart.html"><i class="fas fa-shopping-cart"></i> Shopping Cart</a></li>
+                        <li><a href="login.html"><i class="fas fa-user-shield"></i> Admin Login</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section-modern">
+                    <h4>Customer Service</h4>
+                    <ul>
+                        <li><a href="#"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                        <li><a href="#"><i class="fas fa-truck"></i> Shipping Info</a></li>
+                        <li><a href="#"><i class="fas fa-undo"></i> Returns</a></li>
+                        <li><a href="#"><i class="fas fa-headset"></i> Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section-modern">
+                    <h4>Contact Info</h4>
+                    <p><i class="fas fa-map-marker-alt"></i> 123 Shopping Street, City, State 12345</p>
+                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                    <p><i class="fas fa-envelope"></i> info@premiumvapeshop.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom-modern">
+                <p>&copy; 2025 Premium Vape Shop. All rights reserved.</p>
+                <div class="footer-links-modern">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+    <script>
+        // Get brand from URL
+        function getBrandFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('brand') || '';
+        }
+
+        // Load brand page
+        function loadBrandPage() {
+            const brandName = getBrandFromURL();
+            
+            // Get brand data from localStorage
+            const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+            const brandSubBrands = JSON.parse(localStorage.getItem('brandSubBrands') || '{}');
+            
+            if (!brandName || !brands.includes(brandName)) {
+                document.getElementById('brandTitle').textContent = 'Brand Not Found';
+                document.getElementById('subBrandsGrid').innerHTML = '<p style="text-align: center; padding: 40px;">Brand not found. <a href="index.html">Go back to home</a></p>';
+                return;
+            }
+
+            // Update page title and header
+            document.getElementById('brandTitle').textContent = brandName;
+            document.title = `${brandName} - Premium Store`;
+            
+            // Update store name
+            const storeName = localStorage.getItem('storeName') || 'Premium Store';
+            document.getElementById('storeNameHeader').textContent = storeName;
+            document.getElementById('footerStoreName').textContent = storeName;
+
+            // Load sub-brands from localStorage
+            const subBrands = brandSubBrands[brandName] || [];
+            loadSubBrands(subBrands);
+            
+            // Load products for this brand
+            loadBrandProducts(brandName);
+            
+            // Update cart count
+            updateCartCount();
+        }
+
+        // Load sub-brands
+        function loadSubBrands(subBrands) {
+            const subBrandsGrid = document.getElementById('subBrandsGrid');
+            
+            if (subBrands.length === 0) {
+                subBrandsGrid.innerHTML = '<p style="text-align: center; padding: 40px; color: #6b7280;">No sub-brands available.</p>';
+                return;
+            }
+
+            subBrandsGrid.innerHTML = subBrands.map(subBrand => `
+                <div class="sub-brand-card" onclick="filterBySubBrand('${subBrand}')">
+                    <div class="sub-brand-icon">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <h3>${subBrand}</h3>
+                    <p>View products</p>
+                </div>
+            `).join('');
+        }
+
+        // Filter products by sub-brand
+        function filterBySubBrand(subBrand) {
+            const products = JSON.parse(localStorage.getItem('products') || '[]');
+            const brandName = getBrandFromURL();
+            
+            // Filter products that match the brand and sub-brand
+            const filtered = products.filter(p => {
+                const productBrand = (p.brand || '').toUpperCase();
+                const productName = (p.name || '').toUpperCase();
+                const searchBrand = brandName.toUpperCase();
+                const searchSubBrand = subBrand.toUpperCase();
+                
+                return productBrand === searchBrand && 
+                       (productName.includes(searchSubBrand) || productName.includes(subBrand));
+            });
+
+            displayFilteredProducts(filtered, subBrand);
+            
+            // Scroll to products
+            document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+        }
+        window.filterBySubBrand = filterBySubBrand;
+
+        // Load all products for the brand
+        function loadBrandProducts(brandName) {
+            const products = JSON.parse(localStorage.getItem('products') || '[]');
+            const productsGrid = document.getElementById('productsGrid');
+            const noProducts = document.getElementById('noProducts');
+            
+            // Filter products by brand
+            const brandProducts = products.filter(p => {
+                const productBrand = (p.brand || '').toUpperCase();
+                return productBrand === brandName.toUpperCase();
+            });
+
+            if (brandProducts.length === 0) {
+                productsGrid.innerHTML = '';
+                noProducts.style.display = 'block';
+                document.getElementById('productsSubtitle').textContent = 'No products found for this brand.';
+                return;
+            }
+
+            noProducts.style.display = 'none';
+            productsGrid.innerHTML = brandProducts.map(product => createBrandProductCard(product)).join('');
+            document.getElementById('productsSubtitle').textContent = `Found ${brandProducts.length} product(s) for ${brandName}`;
+        }
+
+        // Display filtered products
+        function displayFilteredProducts(products, subBrand) {
+            const productsGrid = document.getElementById('productsGrid');
+            const noProducts = document.getElementById('noProducts');
+            
+            if (products.length === 0) {
+                productsGrid.innerHTML = '';
+                noProducts.style.display = 'block';
+                document.getElementById('productsSubtitle').textContent = `No products found for ${subBrand}.`;
+                return;
+            }
+
+            noProducts.style.display = 'none';
+            productsGrid.innerHTML = products.map(product => createBrandProductCard(product)).join('');
+            document.getElementById('productsSubtitle').textContent = `Found ${products.length} product(s) for ${subBrand}`;
+        }
+
+        // Create custom product card for brand page
+        function createBrandProductCard(product) {
+            if (!product) return '';
+            
+            const imageSrc = getImageSource(product.image);
+            const hasImage = imageSrc !== null && imageSrc.trim() !== '';
+            
+            const escapeHtml = (text) => {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+            
+            const productName = escapeHtml(product.name || 'Unnamed Product');
+            const productId = String(product.id || '');
+            const productStock = product.stock || 0;
+            const productStatus = product.status || 'available';
+            const isInStock = productStock > 0 && productStatus === 'available';
+            
+            const imageDisplay = hasImage 
+                ? `<img src="${imageSrc}" 
+                     alt="${productName}" 
+                     class="brand-product-image" 
+                     loading="lazy"
+                     onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='<div class=\\'brand-product-placeholder\\'><i class=\\'fas fa-image\\'></i></div>';">
+                  `
+                : `<div class="brand-product-placeholder">
+                     <i class="fas fa-image"></i>
+                   </div>`;
+            
+            return `
+                <div class="brand-product-card" data-product-id="${productId}">
+                    <div class="brand-product-image-wrapper">
+                        ${imageDisplay}
+                    </div>
+                    <div class="brand-product-info">
+                        <h3 class="brand-product-name">${productName}</h3>
+                        <div class="brand-product-price-text">
+                            <span class="login-price-text">LOGIN TO VIEW PRICES</span>
+                        </div>
+                        <div class="brand-product-actions">
+                            <button class="btn-view-product" onclick="viewProduct('${productId}')">
+                                <i class="fas fa-eye"></i>
+                                <span>View Product</span>
+                            </button>
+                            <button class="btn-quick-order" onclick="quickOrder('${productId}')" ${!isInStock ? 'disabled' : ''}>
+                                <i class="fas fa-bolt"></i>
+                                <span>Quick Order</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Quick order function
+        function quickOrder(productId) {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (!isLoggedIn) {
+                alert('Please login to place a quick order.');
+                window.location.href = 'login.html';
+                return;
+            }
+            addToCart(productId);
+            alert('Product added to cart!');
+        }
+        window.quickOrder = quickOrder;
+        window.createBrandProductCard = createBrandProductCard;
+        
+        // Handle search
+        function handleSearch(event) {
+            event.preventDefault();
+            const query = document.getElementById('headerSearch').value;
+            const products = JSON.parse(localStorage.getItem('products') || '[]');
+            const brandName = getBrandFromURL();
+            
+            const filtered = products.filter(p => {
+                const productBrand = (p.brand || '').toUpperCase();
+                const matchesBrand = productBrand === brandName.toUpperCase();
+                const matchesQuery = p.name.toLowerCase().includes(query.toLowerCase()) ||
+                                   p.brand.toLowerCase().includes(query.toLowerCase()) ||
+                                   p.flavor.toLowerCase().includes(query.toLowerCase());
+                return matchesBrand && matchesQuery;
+            });
+            
+            displayFilteredProducts(filtered, query);
+            document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+        }
+        window.handleSearch = handleSearch;
+        
+        // Update cart count
+        function updateCartCount() {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const cartCount = document.getElementById('cartCount');
+            if (cartCount) {
+                const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                cartCount.textContent = totalItems;
+            }
+        }
+        window.updateCartCount = updateCartCount;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBrandPage();
+            updateCartCount();
+            
+            // Update store name
+            const storeName = localStorage.getItem('storeName') || 'Premium Vape Shop';
+            document.getElementById('storeNameHeader').textContent = storeName;
+            const footerStoreName = document.getElementById('footerStoreName');
+            if (footerStoreName) footerStoreName.textContent = storeName;
+        });
+    </script>
+</body>
+</html>
+

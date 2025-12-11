@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title id="pageTitle">Premium Vape Shop - Premium Vape Products & Accessories</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="light-colorful-theme">
+    <!-- Top Info Bar -->
+    <div class="top-info-bar">
+        <div class="container">
+            <div class="top-info-content">
+                <div class="top-info-left">
+                    <span><i class="fas fa-phone"></i> +1 (555) 123-4567</span>
+                    <span><i class="fas fa-envelope"></i> support@premiumvapeshop.com</span>
+                    <span><i class="fas fa-map-marker-alt"></i> Free Shipping Over $50</span>
+                </div>
+                <div class="top-info-right">
+                    <a href="login.html"><i class="fas fa-user-shield"></i> Admin</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-wrapper">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <i class="fas fa-smoking"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1 class="store-name" id="storeNameHeader">Premium Vape Shop</h1>
+                        <p class="store-tagline">Your Premium Vape Destination</p>
+                    </div>
+                </div>
+                
+                <div class="search-section">
+                    <form class="search-form" onsubmit="handleSearch(event)">
+                        <div class="search-wrapper">
+                            <input type="text" id="headerSearch" placeholder="Search products, brands..." class="search-input">
+                            <button type="submit" class="search-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="header-actions">
+                    <a href="#" class="cart-button coming-soon-cart" onclick="showComingSoon(event)">
+                        <div class="cart-icon-wrapper">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span class="cart-count" id="cartCount" style="display: none;">0</span>
+                        </div>
+                        <span class="cart-label">Cart</span>
+                        <span class="coming-soon-badge">Coming Soon</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Image Slider Section -->
+    <section class="image-slider-section">
+        <div class="slider-container">
+            <div class="slider-wrapper" id="sliderWrapper">
+                <!-- Slides will be loaded here -->
+            </div>
+            <div class="slider-controls">
+                <button class="slider-nav prev" onclick="changeSlide(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="slider-nav next" onclick="changeSlide(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="slider-indicators" id="sliderDots">
+                <!-- Dots will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content-wrapper">
+        <div class="container">
+            <!-- Brands Section -->
+            <section class="content-section-full brands-section-modern">
+                <div class="section-header-modern-full">
+                    <div>
+                        <h2><i class="fas fa-tags"></i> Shop by Brand</h2>
+                        <p>Explore products by your favorite brands</p>
+                    </div>
+                </div>
+                <div class="brands-grid-modern" id="brandsGrid">
+                    <!-- Brands will be loaded dynamically from localStorage -->
+                </div>
+            </section>
+            
+            <!-- Featured Products Section -->
+            <section class="content-section-full featured-section-modern">
+                <div class="section-header-modern-full">
+                    <div>
+                        <h2><i class="fas fa-star"></i> Featured Products</h2>
+                        <p>Handpicked favorites just for you</p>
+                    </div>
+                </div>
+                <div class="featured-products-modern-full" id="featuredProducts">
+                    <!-- Featured products will be loaded here -->
+                </div>
+            </section>
+
+            <!-- All Products Section -->
+            <section class="content-section-full products-section-modern" id="products">
+                <div class="section-header-modern-full">
+                    <div>
+                        <h2><i class="fas fa-box"></i> All Products</h2>
+                        <p>Browse our complete collection</p>
+                    </div>
+                    <div class="view-controls">
+                        <button class="view-btn active" onclick="setViewMode('grid')" id="gridViewBtn" title="Grid View">
+                            <i class="fas fa-th"></i>
+                        </button>
+                        <button class="view-btn" onclick="setViewMode('list')" id="listViewBtn" title="List View">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="products-container-full-screen" id="productsContainer">
+                    <div class="products-grid-modern-full" id="productsGrid">
+                        <!-- Products will be loaded here -->
+                    </div>
+                </div>
+                <div class="no-products" id="noProducts" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <p>No products found.</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter-section-modern">
+        <div class="container">
+            <div class="newsletter-content-modern">
+                <div class="newsletter-text-modern">
+                    <h2><i class="fas fa-envelope"></i> Subscribe to Our Newsletter</h2>
+                    <p>Get the latest updates, offers, and exclusive deals delivered to your inbox</p>
+                </div>
+                <form class="newsletter-form-modern" onsubmit="handleNewsletter(event)">
+                    <input type="email" placeholder="Enter your email address" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer-modern">
+        <div class="container">
+            <div class="footer-content-modern">
+                <div class="footer-section-modern">
+                    <h3><i class="fas fa-smoking"></i> <span id="footerStoreName">Premium Vape Shop</span></h3>
+                    <p>Your trusted destination for premium vape products. Quality you can trust, prices you'll love.</p>
+                    <div class="social-links-modern">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section-modern">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#"><i class="fas fa-home"></i> Home</a></li>
+                        <li><a href="#products"><i class="fas fa-box"></i> Products</a></li>
+                        <li><a href="cart.html"><i class="fas fa-shopping-cart"></i> Shopping Cart</a></li>
+                        <li><a href="login.html"><i class="fas fa-user-shield"></i> Admin Login</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section-modern">
+                    <h4>Customer Service</h4>
+                    <ul>
+                        <li><a href="#"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                        <li><a href="#"><i class="fas fa-truck"></i> Shipping Info</a></li>
+                        <li><a href="#"><i class="fas fa-undo"></i> Returns</a></li>
+                        <li><a href="#"><i class="fas fa-headset"></i> Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section-modern">
+                    <h4>Contact Info</h4>
+                    <p><i class="fas fa-map-marker-alt"></i> 123 Shopping Street, City, State 12345</p>
+                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                    <p><i class="fas fa-envelope"></i> info@premiumvapeshop.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom-modern">
+                <p>&copy; 2025 Premium Vape Shop. All rights reserved.</p>
+                <div class="footer-links-modern">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top-modern" id="scrollTop" onclick="scrollToTop()">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script src="app.js"></script>
+    <script>
+        // Load brands from localStorage
+        function loadBrands() {
+            const brandsGrid = document.getElementById('brandsGrid');
+            if (!brandsGrid) return;
+            
+            const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+            const brandSubBrands = JSON.parse(localStorage.getItem('brandSubBrands') || '{}');
+            
+            if (brands.length === 0) {
+                brandsGrid.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #6b7280; grid-column: 1 / -1;"><i class="fas fa-tags" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i><p style="font-size: 18px; margin-bottom: 10px;">No brands available</p><p style="font-size: 14px; opacity: 0.7;">Go to Admin Panel to add brands</p></div>';
+                return;
+            }
+            
+            brandsGrid.innerHTML = brands.map(brand => {
+                const subBrands = brandSubBrands[brand] || [];
+                const subBrandsCount = subBrands.length;
+                
+                return `
+                    <div class="brand-card-modern" onclick="viewBrand('${brand}')">
+                        <div class="brand-icon-modern">${brand.charAt(0).toUpperCase()}</div>
+                        <h3>${brand}</h3>
+                        ${subBrandsCount > 0 ? `<p class="brand-subtitle">${subBrandsCount} ${subBrandsCount === 1 ? 'Sub-brand' : 'Sub-brands'}</p>` : ''}
+                        <div class="brand-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        window.loadBrands = loadBrands;
+        
+        // Brand navigation function
+        function viewBrand(brandName) {
+            window.location.href = `brand.html?brand=${encodeURIComponent(brandName)}`;
+        }
+        window.viewBrand = viewBrand;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeHomePage();
+            updateCartCount();
+            
+            // Initialize slider
+            if (typeof initSlider !== 'undefined') {
+                initSlider();
+            }
+            
+            // Load brands
+            loadBrands();
+            
+            // Load products
+            loadProducts();
+            
+            // Initialize featured products
+            function initializeFeatured() {
+                if (typeof createProductCard !== 'undefined' && typeof getImageSource !== 'undefined') {
+                    loadFeaturedProducts();
+                } else {
+                    setTimeout(initializeFeatured, 100);
+                }
+            }
+            
+            setTimeout(initializeFeatured, 300);
+            
+            setTimeout(() => {
+                const container = document.getElementById('featuredProducts');
+                if (container && !container.querySelector('.product-card') && 
+                    !container.innerHTML.includes('No featured') && 
+                    !container.innerHTML.includes('Error')) {
+                    loadFeaturedProducts();
+                }
+            }, 2000);
+            
+            // Update store name
+            const storeName = localStorage.getItem('storeName') || 'Premium Vape Shop';
+            document.getElementById('storeNameHeader').textContent = storeName;
+            const footerStoreName = document.getElementById('footerStoreName');
+            if (footerStoreName) footerStoreName.textContent = storeName;
+        });
+        
+        // Listen for storage changes
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'sliderImages') {
+                if (typeof initSlider !== 'undefined') {
+                    initSlider();
+                }
+            }
+            if (e.key === 'featuredProducts' || e.key === 'products') {
+                setTimeout(loadFeaturedProducts, 100);
+            }
+            if (e.key === 'brands' || e.key === 'brandSubBrands') {
+                loadBrands();
+            }
+        });
+        
+        // Featured Products
+        function loadFeaturedProducts() {
+            const featuredContainer = document.getElementById('featuredProducts');
+            if (!featuredContainer) return;
+            
+            if (typeof createProductCard === 'undefined' || typeof getImageSource === 'undefined') {
+                setTimeout(loadFeaturedProducts, 100);
+                return;
+            }
+            
+            try {
+                const products = JSON.parse(localStorage.getItem('products') || '[]');
+                const featuredProductIds = JSON.parse(localStorage.getItem('featuredProducts') || '[]');
+                
+                const featured = [];
+                for (let i = 0; i < featuredProductIds.length && featured.length < 4; i++) {
+                    const id = featuredProductIds[i];
+                    if (id && String(id).trim() !== '') {
+                        const product = products.find(p => String(p.id) === String(id));
+                        if (product) {
+                            featured.push(product);
+                        }
+                    }
+                }
+                
+                if (featured.length > 0) {
+                    featuredContainer.innerHTML = featured.map(product => createProductCard(product)).join('');
+                } else if (products.length > 0) {
+                    const fallback = products.slice(0, 4);
+                    featuredContainer.innerHTML = fallback.map(product => createProductCard(product)).join('');
+                } else {
+                    featuredContainer.innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px; color: #6b7280;">
+                            <i class="fas fa-star" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i>
+                            <p style="font-size: 18px; margin-bottom: 10px;">No featured products yet</p>
+                            <p style="font-size: 14px; opacity: 0.7;">Go to Admin Panel to set featured products</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading featured products:', error);
+                featuredContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ef4444;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 32px; margin-bottom: 15px;"></i>
+                        <p>Error loading featured products. Please refresh the page.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        window.loadFeaturedProducts = loadFeaturedProducts;
+        
+        
+        // Keep dropdown open when hovering over it
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const dropdowns = document.querySelectorAll('.sub-brands-dropdown');
+                dropdowns.forEach(dropdown => {
+                    dropdown.addEventListener('mouseenter', function(e) {
+                        e.stopPropagation();
+                        this.style.opacity = '1';
+                        this.style.transform = 'translateY(0)';
+                    });
+                    dropdown.addEventListener('mouseleave', function(e) {
+                        e.stopPropagation();
+                        const card = this.closest('.brand-card-modern');
+                        if (card) {
+                            hideSubBrands(card);
+                        }
+                    });
+                });
+            }, 100);
+        });
+
+        function handleSearch(event) {
+            event.preventDefault();
+            const query = document.getElementById('headerSearch').value;
+            const products = JSON.parse(localStorage.getItem('products') || '[]');
+            const filtered = products.filter(p => 
+                p.name.toLowerCase().includes(query.toLowerCase()) ||
+                p.brand.toLowerCase().includes(query.toLowerCase()) ||
+                p.flavor.toLowerCase().includes(query.toLowerCase())
+            );
+            displayFilteredProducts(filtered);
+            document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function handleNewsletter(event) {
+            event.preventDefault();
+            alert('Thank you for subscribing! You will receive our latest updates.');
+            event.target.reset();
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Show scroll to top button
+        window.addEventListener('scroll', function() {
+            const scrollTop = document.getElementById('scrollTop');
+            if (window.scrollY > 300) {
+                scrollTop.style.display = 'flex';
+            } else {
+                scrollTop.style.display = 'none';
+            }
+        });
+
+        // View Mode Toggle (Grid/List)
+        let currentViewMode = localStorage.getItem('productViewMode') || 'grid';
+        
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            localStorage.setItem('productViewMode', mode);
+            
+            const productsGrid = document.getElementById('productsGrid');
+            const gridBtn = document.getElementById('gridViewBtn');
+            const listBtn = document.getElementById('listViewBtn');
+            
+            if (!productsGrid) return;
+            
+            if (mode === 'grid') {
+                productsGrid.classList.remove('list-view');
+                productsGrid.classList.add('grid-view');
+                if (gridBtn) gridBtn.classList.add('active');
+                if (listBtn) listBtn.classList.remove('active');
+            } else {
+                productsGrid.classList.remove('grid-view');
+                productsGrid.classList.add('list-view');
+                if (listBtn) listBtn.classList.add('active');
+                if (gridBtn) gridBtn.classList.remove('active');
+            }
+        }
+        
+        window.setViewMode = setViewMode;
+        
+        // Initialize view mode on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                setViewMode(currentViewMode);
+            }, 100);
+        });
+        
+        // Show coming soon message for cart
+        function showComingSoon(event) {
+            event.preventDefault();
+            alert('Shopping Cart feature is coming soon! Stay tuned for updates.');
+        }
+        window.showComingSoon = showComingSoon;
+    </script>
+</body>
+</html>
