@@ -594,7 +594,32 @@ function initSlider() {
     sliderImages.forEach((image, index) => {
         const slide = document.createElement('div');
         slide.className = 'slide' + (index === 0 ? ' active' : '');
-        slide.innerHTML = `<img src="${image}" alt="Slide ${index + 1}" class="slide-image">`;
+        
+        // Create image element with proper loading and error handling
+        const img = document.createElement('img');
+        img.src = image;
+        img.alt = `Slide ${index + 1}`;
+        img.className = 'slide-image';
+        img.loading = 'lazy';
+        
+        // Handle image load
+        img.onload = function() {
+            this.style.opacity = '1';
+        };
+        
+        // Handle image error
+        img.onerror = function() {
+            this.style.display = 'none';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'slide-image-placeholder';
+            placeholder.innerHTML = `
+                <i class="fas fa-image"></i>
+                <p>Image ${index + 1} not found</p>
+            `;
+            slide.appendChild(placeholder);
+        };
+        
+        slide.appendChild(img);
         sliderWrapper.appendChild(slide);
         
         const dot = document.createElement('div');

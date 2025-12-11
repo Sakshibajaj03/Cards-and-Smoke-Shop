@@ -220,10 +220,84 @@
         <i class="fas fa-arrow-up"></i>
     </button>
 
+    <!-- Site Update Message Box -->
+    <div id="siteUpdateMessage" class="site-update-message" style="display: none;">
+        <div class="site-update-message-content">
+            <div class="site-update-icon">
+                <i class="fas fa-sync-alt fa-spin"></i>
+            </div>
+            <div class="site-update-text">
+                <h3>The site is updating</h3>
+                <p>Please wait for a few seconds...</p>
+            </div>
+            <button class="site-update-close" onclick="closeUpdateMessage()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="site-update-progress"></div>
+    </div>
+
     <script src="app.js"></script>
     <script>
         // Initialize brand filter
         window.currentBrandFilter = null;
+        
+        // Site Update Message - Show every 2 hours
+        function checkAndShowUpdateMessage() {
+            const UPDATE_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+            const DISPLAY_DURATION = 30 * 1000; // 30 seconds in milliseconds
+            const STORAGE_KEY = 'lastUpdateMessageTime';
+            
+            const lastShown = localStorage.getItem(STORAGE_KEY);
+            const now = Date.now();
+            
+            // Check if 2 hours have passed since last message
+            if (!lastShown || (now - parseInt(lastShown)) >= UPDATE_INTERVAL) {
+                showUpdateMessage();
+                // Update the last shown time
+                localStorage.setItem(STORAGE_KEY, now.toString());
+            }
+        }
+        
+        function showUpdateMessage() {
+            const messageBox = document.getElementById('siteUpdateMessage');
+            if (!messageBox) return;
+            
+            // Reset progress bar
+            const progressBar = messageBox.querySelector('.site-update-progress');
+            if (progressBar) {
+                progressBar.style.animation = 'none';
+                // Force reflow to reset animation
+                void progressBar.offsetWidth;
+            }
+            
+            // Show the message
+            messageBox.style.display = 'block';
+            
+            // Start progress bar animation (30 seconds) after a small delay
+            setTimeout(() => {
+                if (progressBar) {
+                    progressBar.style.animation = 'progressBar 30s linear forwards';
+                }
+            }, 100);
+            
+            // Auto-hide after 30 seconds
+            setTimeout(() => {
+                closeUpdateMessage();
+            }, 30000);
+        }
+        
+        function closeUpdateMessage() {
+            const messageBox = document.getElementById('siteUpdateMessage');
+            if (messageBox) {
+                messageBox.style.animation = 'slideOutUp 0.5s ease-out forwards';
+                setTimeout(() => {
+                    messageBox.style.display = 'none';
+                    messageBox.style.animation = '';
+                }, 500);
+            }
+        }
+        window.closeUpdateMessage = closeUpdateMessage;
         
         // Load brands from localStorage
         function loadBrands() {
@@ -382,6 +456,9 @@
             
             // Load products
             loadProducts();
+            
+            // Check and show update message (every 2 hours)
+            checkAndShowUpdateMessage();
             
             // Initialize featured products
             function initializeFeatured() {
