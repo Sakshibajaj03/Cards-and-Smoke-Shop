@@ -828,8 +828,7 @@ function createProductCard(product) {
                 <div class="product-header-full">
                     <h3 class="product-name-full">${productName}</h3>
                     <div class="product-price-full">
-                        <span class="price-currency">$</span>
-                        <span class="price-amount">${productPrice}</span>
+                        <span class="price-amount">--</span>
                     </div>
                 </div>
                 <div class="product-meta-full">
@@ -1130,7 +1129,7 @@ function loadProductDetail(productId) {
             <div class="product-detail-info">
                 <h1>${productName}</h1>
                 <div class="product-detail-price">
-                    <span>$${productPrice}</span>
+                    <span>--</span>
                 </div>
                 <div class="product-detail-meta">
                     <p><strong>Brand:</strong> ${productBrand || 'N/A'}</p>
@@ -1543,7 +1542,7 @@ function loadCart() {
                     <div class="cart-item-info">
                         <h3 class="cart-item-name">${itemName}</h3>
                         <p class="cart-item-meta">Brand: ${itemBrand || 'N/A'}${selectedFlavor ? ` | Flavor: ${escapeHtml(selectedFlavor)}` : ''}</p>
-                        <p class="cart-item-price">$${itemPrice}</p>
+                        <p class="cart-item-price">--</p>
                         <div class="cart-item-actions">
                             <div class="quantity-selector">
                                 <button onclick="updateCartQuantity('${itemId}', -1)" aria-label="Decrease quantity">-</button>
@@ -1661,10 +1660,10 @@ function updateOrderSummary(subtotal) {
         const totalEl = document.getElementById('total');
         const checkoutBtn = document.getElementById('checkoutBtn');
         
-        if (subtotalEl) subtotalEl.textContent = `$${subtotalValue.toFixed(2)}`;
-        if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
-        if (shippingEl) shippingEl.textContent = `$${shipping.toFixed(2)}`;
-        if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+        if (subtotalEl) subtotalEl.textContent = '--';
+        if (taxEl) taxEl.textContent = '--';
+        if (shippingEl) shippingEl.textContent = '--';
+        if (totalEl) totalEl.textContent = '--';
         if (checkoutBtn) checkoutBtn.disabled = subtotalValue === 0;
     } catch (error) {
         console.error('Error updating order summary:', error);

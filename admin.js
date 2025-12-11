@@ -611,7 +611,7 @@ function loadFeaturedProducts() {
                         </div>
                         <div class="featured-product-info">
                             <h4>${featuredProduct.name}</h4>
-                            <p>$${parseFloat(featuredProduct.price).toFixed(2)}</p>
+                            <p>--</p>
                         </div>
                         <button class="remove-featured-btn" onclick="removeFeaturedProduct(${i})">
                             <i class="fas fa-times"></i> Remove
@@ -626,7 +626,7 @@ function loadFeaturedProducts() {
                 <select class="featured-product-select" id="featuredSelect${i}" onchange="previewFeaturedProduct(${i}, this.value)">
                     <option value="">-- Select Product --</option>
                     ${products.map(p => `
-                        <option value="${p.id}" ${p.id === featuredProductId ? 'selected' : ''}>${p.name} - $${parseFloat(p.price).toFixed(2)}</option>
+                        <option value="${p.id}" ${p.id === featuredProductId ? 'selected' : ''}>${p.name} - --</option>
                     `).join('')}
                 </select>
             </div>
@@ -657,7 +657,7 @@ function previewFeaturedProduct(slotIndex, productId) {
             </div>
             <div class="featured-product-info">
                 <h4>${product.name}</h4>
-                <p>$${parseFloat(product.price).toFixed(2)}</p>
+                <p>--</p>
             </div>
             <button class="remove-featured-btn" onclick="removeFeaturedProduct(${slotIndex})">
                 <i class="fas fa-times"></i> Remove
@@ -910,7 +910,7 @@ function loadProductsAdmin() {
                 <div style="flex: 1;">
                     <h3>${product.name}</h3>
                     <p>Brand: ${product.brand} | Flavor: ${product.flavor}</p>
-                    <p style="font-size: 18px; font-weight: 700; color: var(--primary-color); margin-top: 8px;">$${parseFloat(product.price).toFixed(2)}</p>
+                    <p style="font-size: 18px; font-weight: 700; color: var(--primary-color); margin-top: 8px;">--</p>
                     ${!hasImage ? '<p style="color: #f59e0b; font-weight: 600; margin-top: 10px; padding: 8px; background: #fef3c7; border-radius: 6px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> Image needed - Click Edit to upload</p>' : '<p style="color: var(--success-color); font-weight: 600; margin-top: 10px; padding: 8px; background: #d1fae5; border-radius: 6px; display: inline-block;"><i class="fas fa-check-circle"></i> Image uploaded</p>'}
       </div>
       </div>
@@ -1037,7 +1037,8 @@ document.getElementById('productForm').addEventListener('submit', function(e) {
 function saveProduct() {
     const productId = document.getElementById('productId').value;
     const name = document.getElementById('productName').value.trim();
-    const price = document.getElementById('productPrice').value;
+    const priceInput = document.getElementById('productPrice');
+    const price = priceInput ? (priceInput.value || '0') : '0';
     const brand = document.getElementById('productBrand').value;
     const description = document.getElementById('productDescription').value.trim();
     const specs = document.getElementById('productSpecs').value.trim();
@@ -1055,8 +1056,8 @@ function saveProduct() {
         return;
     }
     
-    // Validation
-    if (!name || !price || !brand) {
+    // Validation (price is hidden, defaults to 0)
+    if (!name || !brand) {
         alert('Please fill in all required fields.');
         return;
     }
