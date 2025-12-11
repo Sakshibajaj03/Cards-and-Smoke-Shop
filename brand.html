@@ -15,7 +15,7 @@
         <div class="container">
             <div class="top-info-content">
                 <div class="top-info-left">
-                    <span><i class="fas fa-phone"></i> +1 (555) 123-4567</span>
+                    <span><i class="fas fa-phone"></i> +1 (631) 202-7086</span>
                     <span><i class="fas fa-envelope"></i> support@premiumvapeshop.com</span>
                     <span><i class="fas fa-map-marker-alt"></i> Free Shipping Over $50</span>
                 </div>
@@ -147,8 +147,8 @@
                 </div>
                 <div class="footer-section-modern">
                     <h4>Contact Info</h4>
-                    <p><i class="fas fa-map-marker-alt"></i> 123 Shopping Street, City, State 12345</p>
-                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                    <p><i class="fas fa-map-marker-alt"></i> 1100-4 Portion Road, Farmingville NY 11738</p>
+                    <p><i class="fas fa-phone"></i> +1 (631) 202-7086</p>
                     <p><i class="fas fa-envelope"></i> info@premiumvapeshop.com</p>
                 </div>
             </div>
@@ -352,8 +352,14 @@
                 window.location.href = 'login.html';
                 return;
             }
-            addToCart(productId);
-            alert('Product added to cart!');
+            // Show coming soon notification (addToCart already shows it, but we ensure it's called)
+            if (typeof addToCart === 'function') {
+                addToCart(productId);
+            } else if (typeof showComingSoonNotification === 'function') {
+                showComingSoonNotification('Shopping Cart feature is coming soon! Stay tuned for updates.');
+            } else {
+                alert('Shopping Cart feature is coming soon! Stay tuned for updates.');
+            }
         }
         window.quickOrder = quickOrder;
         window.createBrandProductCard = createBrandProductCard;

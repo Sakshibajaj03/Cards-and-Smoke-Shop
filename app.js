@@ -1158,10 +1158,106 @@ function decreaseQuantity() {
     }
 }
 
+// Show coming soon notification
+function showComingSoonNotification(message = 'Shopping Cart feature is coming soon! Stay tuned for updates.') {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.coming-soon-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'coming-soon-notification';
+    notification.innerHTML = `
+        <div class="coming-soon-notification-content">
+            <i class="fas fa-clock"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add styles if not already added
+    if (!document.getElementById('coming-soon-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'coming-soon-notification-styles';
+        style.textContent = `
+            .coming-soon-notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+                z-index: 10000;
+                animation: slideInRight 0.3s ease-out;
+                max-width: 400px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            }
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            .coming-soon-notification-content {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 15px;
+                font-weight: 600;
+            }
+            .coming-soon-notification-content i {
+                font-size: 20px;
+                animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.6;
+                }
+            }
+            @media (max-width: 768px) {
+                .coming-soon-notification {
+                    top: 10px;
+                    right: 10px;
+                    left: 10px;
+                    max-width: none;
+                    padding: 14px 20px;
+                }
+                .coming-soon-notification-content {
+                    font-size: 14px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 4 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    }, 4000);
+}
+
 // Cart functions
 function addToCart(productId) {
     // Coming Soon feature
-    alert('Shopping Cart feature is coming soon! Stay tuned for updates.');
+    showComingSoonNotification('Shopping Cart feature is coming soon! Stay tuned for updates.');
     return;
     
     // This function is called from product cards
@@ -1170,7 +1266,7 @@ function addToCart(productId) {
 
 function addToCartFromDetail(productId) {
     // Coming Soon feature
-    alert('Shopping Cart feature is coming soon! Stay tuned for updates.');
+    showComingSoonNotification('Shopping Cart feature is coming soon! Stay tuned for updates.');
     return;
     
     // This function is called from product detail page
@@ -1180,6 +1276,11 @@ function addToCartFromDetail(productId) {
     // const selectedFlavor = selectedFlavorInput ? selectedFlavorInput.value : '';
     // addToCartWithQuantity(productId, quantity, selectedFlavor);
 }
+
+// Make functions globally available
+window.addToCart = addToCart;
+window.addToCartFromDetail = addToCartFromDetail;
+window.showComingSoonNotification = showComingSoonNotification;
 
 // Flavor selection function
 function selectFlavor(flavorName, flavorImage, element) {

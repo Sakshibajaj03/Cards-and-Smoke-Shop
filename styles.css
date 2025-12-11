@@ -2190,40 +2190,18 @@ img:not([src]) {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0;
 }
 
-@media (min-width: 576px) {
-    .products-container-full-screen {
-        padding: 0 30px;
-    }
-}
-
-@media (min-width: 768px) {
-    .products-container-full-screen {
-        padding: 0 40px;
-    }
-}
-
-@media (min-width: 1200px) {
-    .products-container-full-screen {
-        padding: 0 60px;
-    }
-}
-
-@media (min-width: 1920px) {
-    .products-container-full-screen {
-        padding: 0 120px;
-    }
-}
-
-/* Full Screen Products Grid */
+/* Full Screen Products Grid - Matching Featured Products Layout */
 .products-grid-modern-full {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 20px;
     width: 100%;
-    max-width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
 }
 
 /* Mobile responsiveness for product grids */
@@ -2231,6 +2209,7 @@ img:not([src]) {
     .products-grid-modern-full {
         grid-template-columns: 1fr;
         gap: 16px;
+        padding: 0 20px;
     }
     
     .featured-products-modern-full {
@@ -2249,6 +2228,7 @@ img:not([src]) {
     .products-grid-modern-full {
         grid-template-columns: repeat(2, 1fr);
         gap: 18px;
+        padding: 0 30px;
     }
     
     .featured-products-modern-full {
@@ -2266,30 +2246,42 @@ img:not([src]) {
     gap: 12px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 576px) {
     .products-grid-modern-full.grid-view {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 20px;
+        padding: 0 30px;
+    }
+}
+
+@media (min-width: 768px) {
+    .products-grid-modern-full.grid-view {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 24px;
+        padding: 0 40px;
     }
 }
 
 @media (min-width: 1200px) {
     .products-grid-modern-full.grid-view {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 28px;
+        padding: 0 60px;
     }
 }
 
 @media (min-width: 1400px) {
     .products-grid-modern-full.grid-view {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 30px;
     }
 }
 
 @media (min-width: 1920px) {
     .products-grid-modern-full.grid-view {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 18px;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 35px;
+        padding: 0 120px;
     }
 }
 
