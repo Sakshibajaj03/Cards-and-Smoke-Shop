@@ -2555,6 +2555,48 @@ img:not([src]) {
     color: white;
 }
 
+/* Active brand card state */
+.brand-card-modern.brand-active {
+    background: var(--gradient-primary);
+    border-color: var(--primary-color);
+    box-shadow: 0 12px 40px rgba(99, 102, 241, 0.4);
+    transform: translateY(-4px);
+}
+
+.brand-card-modern.brand-active h3 {
+    color: white;
+}
+
+.brand-card-modern.brand-active .brand-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.brand-card-modern.brand-active .brand-icon-modern {
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+}
+
+.brand-active-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--primary-color);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.brand-active-badge i {
+    font-size: 10px;
+}
+
 /* Featured Products Modern - Full Width */
 .featured-products-modern {
     display: grid;

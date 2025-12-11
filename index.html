@@ -119,16 +119,21 @@
             <section class="content-section-full products-section-modern" id="products">
                 <div class="section-header-modern-full">
                     <div>
-                        <h2><i class="fas fa-box"></i> All Products</h2>
-                        <p>Browse our complete collection</p>
+                        <h2><i class="fas fa-box"></i> <span id="productsTitle">All Products</span></h2>
+                        <p id="productsSubtitle">Browse our complete collection</p>
                     </div>
-                    <div class="view-controls">
-                        <button class="view-btn active" onclick="setViewMode('grid')" id="gridViewBtn" title="Grid View">
-                            <i class="fas fa-th"></i>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="clearBrandFilter" onclick="clearBrandFilter()" class="view-btn" style="display: none; background: #ef4444; color: white; border-color: #ef4444;" title="Show All Products">
+                            <i class="fas fa-times"></i> Clear Filter
                         </button>
-                        <button class="view-btn" onclick="setViewMode('list')" id="listViewBtn" title="List View">
-                            <i class="fas fa-list"></i>
-                        </button>
+                        <div class="view-controls">
+                            <button class="view-btn active" onclick="setViewMode('grid')" id="gridViewBtn" title="Grid View">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="view-btn" onclick="setViewMode('list')" id="listViewBtn" title="List View">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="products-container-full-screen" id="productsContainer">
@@ -217,6 +222,9 @@
 
     <script src="app.js"></script>
     <script>
+        // Initialize brand filter
+        window.currentBrandFilter = null;
+        
         // Load brands from localStorage
         function loadBrands() {
             const brandsGrid = document.getElementById('brandsGrid');
@@ -233,26 +241,131 @@
             brandsGrid.innerHTML = brands.map(brand => {
                 const subBrands = brandSubBrands[brand] || [];
                 const subBrandsCount = subBrands.length;
+                const isActive = window.currentBrandFilter === brand;
                 
                 return `
-                    <div class="brand-card-modern" onclick="viewBrand('${brand}')">
+                    <div class="brand-card-modern ${isActive ? 'brand-active' : ''}" onclick="viewBrand('${brand}')" data-brand="${brand}">
                         <div class="brand-icon-modern">${brand.charAt(0).toUpperCase()}</div>
                         <h3>${brand}</h3>
                         ${subBrandsCount > 0 ? `<p class="brand-subtitle">${subBrandsCount} ${subBrandsCount === 1 ? 'Sub-brand' : 'Sub-brands'}</p>` : ''}
                         <div class="brand-arrow">
                             <i class="fas fa-arrow-right"></i>
                         </div>
+                        ${isActive ? '<div class="brand-active-badge"><i class="fas fa-check"></i> Active</div>' : ''}
                     </div>
                 `;
             }).join('');
         }
         window.loadBrands = loadBrands;
         
-        // Brand navigation function
+        // Brand filter function - filters products on same page
         function viewBrand(brandName) {
-            window.location.href = `brand.html?brand=${encodeURIComponent(brandName)}`;
+            // Get all products
+            const products = JSON.parse(localStorage.getItem('products') || '[]');
+            
+            // Filter products by brand (case-insensitive)
+            const filteredProducts = products.filter(product => {
+                const productBrand = (product.brand || '').toUpperCase().trim();
+                const searchBrand = brandName.toUpperCase().trim();
+                return productBrand === searchBrand;
+            });
+            
+            // Display filtered products
+            if (typeof displayFilteredProducts === 'function') {
+                displayFilteredProducts(filteredProducts);
+            } else {
+                // Fallback if function not loaded yet
+                setTimeout(() => viewBrand(brandName), 100);
+                return;
+            }
+            
+            // Update section title and subtitle
+            const productsTitle = document.getElementById('productsTitle');
+            const productsSubtitle = document.getElementById('productsSubtitle');
+            const clearFilterBtn = document.getElementById('clearBrandFilter');
+            
+            if (productsTitle) {
+                productsTitle.innerHTML = `<i class="fas fa-tag"></i> ${brandName} Products`;
+            }
+            if (productsSubtitle) {
+                productsSubtitle.textContent = `Showing ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} from ${brandName}`;
+            }
+            if (clearFilterBtn) {
+                clearFilterBtn.style.display = 'flex';
+            }
+            
+            // Store current filter
+            window.currentBrandFilter = brandName;
+            
+            // Update brand cards to show active state
+            updateBrandCardsActiveState();
+            
+            // Scroll to products section smoothly
+            const productsSection = document.getElementById('products');
+            if (productsSection) {
+                setTimeout(() => {
+                    productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+        
+        // Update brand cards to show which one is active
+        function updateBrandCardsActiveState() {
+            const brandCards = document.querySelectorAll('.brand-card-modern');
+            brandCards.forEach(card => {
+                const brandName = card.getAttribute('data-brand');
+                if (brandName === window.currentBrandFilter) {
+                    card.classList.add('brand-active');
+                    if (!card.querySelector('.brand-active-badge')) {
+                        const badge = document.createElement('div');
+                        badge.className = 'brand-active-badge';
+                        badge.innerHTML = '<i class="fas fa-check"></i> Active';
+                        card.appendChild(badge);
+                    }
+                } else {
+                    card.classList.remove('brand-active');
+                    const badge = card.querySelector('.brand-active-badge');
+                    if (badge) badge.remove();
+                }
+            });
         }
         window.viewBrand = viewBrand;
+        
+        // Clear brand filter function
+        function clearBrandFilter() {
+            // Reload all products
+            if (typeof loadProducts === 'function') {
+                loadProducts();
+            }
+            
+            // Reset section title and subtitle
+            const productsTitle = document.getElementById('productsTitle');
+            const productsSubtitle = document.getElementById('productsSubtitle');
+            const clearFilterBtn = document.getElementById('clearBrandFilter');
+            
+            if (productsTitle) {
+                productsTitle.innerHTML = 'All Products';
+            }
+            if (productsSubtitle) {
+                productsSubtitle.textContent = 'Browse our complete collection';
+            }
+            if (clearFilterBtn) {
+                clearFilterBtn.style.display = 'none';
+            }
+            
+            // Clear filter
+            window.currentBrandFilter = null;
+            
+            // Update brand cards to remove active state
+            updateBrandCardsActiveState();
+            
+            // Scroll to products section
+            const productsSection = document.getElementById('products');
+            if (productsSection) {
+                productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        window.clearBrandFilter = clearBrandFilter;
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
