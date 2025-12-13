@@ -60,7 +60,7 @@ function updatePageTitle(sectionId) {
         'settings': 'Store Settings',
         'slider': 'Slider Images',
         'products': 'Products Management',
-        'brands': 'Brands Management',
+        'brands': 'Brands & Flavors Management',
         'flavors': 'Flavors Management',
         'featured': 'Featured Products',
         'data': 'Data Management'
@@ -256,35 +256,383 @@ window.getSliderImages = function() {
 }
 window.generateSliderDataFile = generateSliderDataFile;
 
-// Brands Management
+// Unified Brands & Flavors Management
 function loadBrands() {
     const brands = JSON.parse(localStorage.getItem('brands') || '[]');
-    const brandSubBrands = JSON.parse(localStorage.getItem('brandSubBrands') || '{}');
+    const brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}'); // New: flavors assigned to brands
+    const products = JSON.parse(localStorage.getItem('products') || '[]');
+    const allFlavors = getAllFlavorsFromProducts(); // Get all unique flavors from products
+    
     const brandsList = document.getElementById('brandsList');
+    const emptyState = document.getElementById('brandsEmptyState');
+    
+    // Update statistics
+    updateBrandFlavorStats(brands, brandFlavors, products);
+    
     if (!brandsList) return;
     
+    if (brands.length === 0) {
+        brandsList.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+    }
+    
+    if (emptyState) emptyState.style.display = 'none';
+    
     brandsList.innerHTML = brands.map((brand, index) => {
-        const subBrands = brandSubBrands[brand] || [];
-        const subBrandsList = subBrands.length > 0 
-            ? `<div class="sub-brands-list">
-                 <strong>Sub-brands:</strong>
-                 <ul>
-                   ${subBrands.map(sb => `<li>${sb}</li>`).join('')}
-                 </ul>
-               </div>`
-            : '<div class="sub-brands-list"><em>No sub-brands</em></div>';
+        const assignedFlavors = brandFlavors[brand] || [];
+        const brandProducts = products.filter(p => (p.brand || '').toUpperCase() === brand.toUpperCase());
+        const productCount = brandProducts.length;
+        
+        // Get flavors used in products for this brand
+        const usedFlavors = new Set();
+        brandProducts.forEach(p => {
+            if (p.flavors && Array.isArray(p.flavors)) {
+                p.flavors.forEach(f => {
+                    if (f && f.name) usedFlavors.add(f.name);
+                });
+            } else if (p.flavor) {
+                usedFlavors.add(p.flavor);
+            }
+        });
+        
+        // Combine assigned flavors and used flavors
+        const allBrandFlavors = [...new Set([...assignedFlavors, ...usedFlavors])];
         
         return `
-            <div class="brand-item">
-                <div class="brand-info">
-                    <span class="brand-name"><strong>${brand}</strong></span>
-                    ${subBrandsList}
+            <div class="brand-flavor-card" style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #e5e7eb; transition: all 0.3s ease;">
+                <!-- Brand Header -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 700; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                                ${brand.charAt(0).toUpperCase()}
+                            </div>
+                            <div style="flex: 1;">
+                                <h3 style="margin: 0; font-size: 22px; font-weight: 700; color: #1f2937; display: flex; align-items: center; gap: 10px;">
+                                    <span id="brandNameDisplay_${index}">${brand}</span>
+                                    <button onclick="editBrandName(${index}, '${brand}')" style="background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: #6b7280;" title="Edit brand name">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </h3>
+                                <div style="display: flex; gap: 15px; margin-top: 8px;">
+                                    <span style="display: inline-flex; align-items: center; gap: 5px; background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 13px;">
+                                        <i class="fas fa-box"></i> ${productCount} Products
+                                    </span>
+                                    <span style="display: inline-flex; align-items: center; gap: 5px; background: #f0fdf4; color: #065f46; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 13px;">
+                                        <i class="fas fa-palette"></i> ${allBrandFlavors.length} Flavors
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="deleteBrand(${index})" style="background: #fef2f2; border: 1px solid #ef4444; color: #ef4444; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;" title="Delete Brand">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
-                <button class="delete-btn" onclick="deleteBrand(${index})">Delete</button>
+                
+                <!-- Flavors Section -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-palette"></i> Assigned Flavors
+                        </h4>
+                        <button onclick="showAssignFlavorModal('${brand}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                            <i class="fas fa-plus"></i> Assign Flavor
+                        </button>
+                    </div>
+                    <div id="flavors_${index}" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 50px; padding: 15px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb;">
+                        ${allBrandFlavors.length > 0 
+                            ? allBrandFlavors.map((flavor, fIndex) => {
+                                const isAssigned = assignedFlavors.includes(flavor);
+                                const isUsed = usedFlavors.has(flavor);
+                                return `
+                                    <span class="flavor-tag" style="display: inline-flex; align-items: center; gap: 6px; background: ${isUsed ? '#dbeafe' : '#f0fdf4'}; color: ${isUsed ? '#1e40af' : '#065f46'}; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid ${isUsed ? '#93c5fd' : '#86efac'};">
+                                        ${flavor}
+                                        ${isUsed ? '<i class="fas fa-check-circle" style="font-size: 11px;" title="Used in products"></i>' : ''}
+                                        ${isAssigned ? `<button onclick="removeFlavorFromBrand('${brand}', '${flavor}')" style="background: none; border: none; color: ${isUsed ? '#1e40af' : '#065f46'}; cursor: pointer; padding: 0; margin-left: 4px; font-size: 12px; opacity: 0.7;" title="Remove flavor">
+                                            <i class="fas fa-times"></i>
+                                        </button>` : ''}
+                                    </span>
+                                `;
+                            }).join('')
+                            : '<span style="color: #9ca3af; font-style: italic; width: 100%; text-align: center; padding: 10px;">No flavors assigned yet</span>'
+                        }
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
+    
+    // Add card hover styles
+    if (!document.getElementById('brand-flavor-card-styles')) {
+        const style = document.createElement('style');
+        style.id = 'brand-flavor-card-styles';
+        style.textContent = `
+            .brand-flavor-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+                border-color: #667eea;
+            }
+            .flavor-tag:hover {
+                transform: scale(1.05);
+            }
+            @media (max-width: 768px) {
+                #brandsList {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
+
+function getAllFlavorsFromProducts() {
+    const products = JSON.parse(localStorage.getItem('products') || '[]');
+    const flavors = new Set();
+    
+    products.forEach(product => {
+        if (product.flavors && Array.isArray(product.flavors)) {
+            product.flavors.forEach(f => {
+                if (f && f.name) flavors.add(f.name);
+            });
+        } else if (product.flavor) {
+            flavors.add(product.flavor);
+        }
+    });
+    
+    return Array.from(flavors).sort();
+}
+
+function updateBrandFlavorStats(brands, brandFlavors, products) {
+    const totalBrands = brands.length;
+    const totalFlavors = getAllFlavorsFromProducts().length;
+    const totalProducts = products.length;
+    
+    const totalBrandsStat = document.getElementById('totalBrandsStat');
+    const totalFlavorsStat = document.getElementById('totalFlavorsStat');
+    const totalProductsStat = document.getElementById('totalProductsStat');
+    
+    if (totalBrandsStat) totalBrandsStat.textContent = totalBrands;
+    if (totalFlavorsStat) totalFlavorsStat.textContent = totalFlavors;
+    if (totalProductsStat) totalProductsStat.textContent = totalProducts;
+}
+
+function showAssignFlavorModal(brandName) {
+    const allFlavors = getAllFlavorsFromProducts();
+    const brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+    const assignedFlavors = brandFlavors[brandName] || [];
+    const availableFlavors = allFlavors.filter(f => !assignedFlavors.includes(f));
+    
+    if (availableFlavors.length === 0 && allFlavors.length === 0) {
+        // No flavors exist, offer to create one
+        const newFlavor = prompt(`No flavors found. Create a new flavor for ${brandName}:`, '');
+        if (newFlavor && newFlavor.trim()) {
+            assignFlavorToBrand(brandName, newFlavor.trim());
+        }
+        return;
+    }
+    
+    if (availableFlavors.length === 0) {
+        alert('All available flavors are already assigned to this brand.');
+        return;
+    }
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); 
+        z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 30px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1f2937;">
+                    <i class="fas fa-palette"></i> Assign Flavors to ${brandName}
+                </h3>
+                <button onclick="this.closest('[style*=\"position: fixed\"]').remove()" style="background: #f3f4f6; border: none; border-radius: 8px; padding: 8px; cursor: pointer; color: #6b7280;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151;">
+                    Select flavors to assign:
+                </label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 300px; overflow-y: auto; padding: 15px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;">
+                    ${availableFlavors.map(flavor => `
+                        <label style="display: flex; align-items: center; gap: 8px; background: white; padding: 10px 15px; border-radius: 8px; border: 2px solid #e5e7eb; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 150px;">
+                            <input type="checkbox" value="${flavor}" class="flavor-checkbox" style="cursor: pointer;">
+                            <span style="font-weight: 500; color: #374151;">${flavor}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #374151;">
+                    Or create new flavor:
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newFlavorInput" class="form-input" placeholder="Enter new flavor name" style="flex: 1;">
+                    <button onclick="createAndAssignFlavor('${brandName}')" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-plus"></i> Create & Assign
+                    </button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="this.closest('[style*=\"position: fixed\"]').remove()" style="background: #f3f4f6; border: 1px solid #e5e7eb; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; color: #374151;">
+                    Cancel
+                </button>
+                <button onclick="assignSelectedFlavors('${brandName}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-check"></i> Assign Selected
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.onclick = function(e) {
+        if (e.target === modal) modal.remove();
+    };
+}
+
+function assignSelectedFlavors(brandName) {
+    const checkboxes = document.querySelectorAll('.flavor-checkbox:checked');
+    const flavors = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (flavors.length === 0) {
+        alert('Please select at least one flavor.');
+        return;
+    }
+    
+    flavors.forEach(flavor => {
+        assignFlavorToBrand(brandName, flavor);
+    });
+    
+    document.querySelector('[style*="position: fixed"]').remove();
+    loadBrands();
+    updateDashboardStats();
+}
+
+function assignFlavorToBrand(brandName, flavorName) {
+    let brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+    
+    if (!brandFlavors[brandName]) {
+        brandFlavors[brandName] = [];
+    }
+    
+    if (!brandFlavors[brandName].includes(flavorName)) {
+        brandFlavors[brandName].push(flavorName);
+        localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+    }
+}
+
+function removeFlavorFromBrand(brandName, flavorName) {
+    if (!confirm(`Remove "${flavorName}" from ${brandName}?`)) return;
+    
+    let brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+    
+    if (brandFlavors[brandName]) {
+        brandFlavors[brandName] = brandFlavors[brandName].filter(f => f !== flavorName);
+        if (brandFlavors[brandName].length === 0) {
+            delete brandFlavors[brandName];
+        }
+        localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+    }
+    
+    loadBrands();
+    updateDashboardStats();
+}
+
+function createAndAssignFlavor(brandName) {
+    const input = document.getElementById('newFlavorInput');
+    if (!input || !input.value.trim()) {
+        alert('Please enter a flavor name.');
+        return;
+    }
+    
+    const flavorName = input.value.trim();
+    assignFlavorToBrand(brandName, flavorName);
+    input.value = '';
+    
+    loadBrands();
+    updateDashboardStats();
+}
+
+function editBrandName(index, oldName) {
+    const newName = prompt('Enter new brand name:', oldName);
+    if (!newName || newName.trim() === '' || newName === oldName) {
+        return;
+    }
+    
+    updateBrandName(index, oldName, newName.trim());
+}
+
+// Inline editing functions
+function editBrandInline(index, currentName) {
+    const displayEl = document.getElementById(`brandNameDisplay_${index}`);
+    if (!displayEl) return;
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.style.cssText = 'padding: 6px 10px; border: 2px solid #667eea; border-radius: 6px; font-size: 16px; font-weight: 600; width: 200px;';
+    input.onblur = function() {
+        const newName = this.value.trim();
+        if (newName && newName !== currentName) {
+            updateBrandName(index, currentName, newName);
+        } else {
+            displayEl.textContent = currentName;
+        }
+    };
+    input.onkeypress = function(e) {
+        if (e.key === 'Enter') {
+            this.blur();
+        } else if (e.key === 'Escape') {
+            displayEl.textContent = currentName;
+            this.replaceWith(displayEl);
+        }
+    };
+    
+    displayEl.replaceWith(input);
+    input.focus();
+    input.select();
+}
+
+function updateBrandName(index, oldName, newName) {
+    let brands = JSON.parse(localStorage.getItem('brands') || '[]');
+    if (brands.includes(newName)) {
+        alert('Brand name already exists!');
+        loadBrands();
+        return;
+    }
+    
+    brands[index] = newName;
+    localStorage.setItem('brands', JSON.stringify(brands));
+    
+    // Update brandFlavors
+    let brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+    if (brandFlavors[oldName]) {
+        brandFlavors[newName] = brandFlavors[oldName];
+        delete brandFlavors[oldName];
+        localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+    }
+    
+    // Update products
+    let products = JSON.parse(localStorage.getItem('products') || '[]');
+    products = products.map(p => {
+        if ((p.brand || '').toUpperCase() === oldName.toUpperCase()) {
+            p.brand = newName;
+        }
+        return p;
+    });
+    localStorage.setItem('products', JSON.stringify(products));
+    
+    loadBrands();
+    populateBrandAndFlavorSelects();
+    updateDashboardStats();
+}
+
 
 function addBrand() {
     const input = document.getElementById('newBrand');
@@ -292,15 +640,15 @@ function addBrand() {
     
     if (!brandName) {
         alert('Please enter a brand name.');
-    return;
-  }
-  
+        return;
+    }
+    
     let brands = JSON.parse(localStorage.getItem('brands') || '[]');
     if (brands.includes(brandName)) {
         alert('Brand already exists!');
-    return;
-  }
-  
+        return;
+    }
+    
     brands.push(brandName);
     localStorage.setItem('brands', JSON.stringify(brands));
     input.value = '';
@@ -310,8 +658,15 @@ function addBrand() {
     alert('Brand added successfully!');
 }
 
+// Make functions globally available
+window.editBrandName = editBrandName;
+window.showAssignFlavorModal = showAssignFlavorModal;
+window.removeFlavorFromBrand = removeFlavorFromBrand;
+window.assignSelectedFlavors = assignSelectedFlavors;
+window.createAndAssignFlavor = createAndAssignFlavor;
+
 function deleteBrand(index) {
-    if (!confirm('Are you sure you want to delete this brand?')) return;
+    if (!confirm('Are you sure you want to delete this brand? This will also remove all assigned flavors.')) return;
     
     let brands = JSON.parse(localStorage.getItem('brands') || '[]');
     
@@ -322,15 +677,12 @@ function deleteBrand(index) {
     brands.splice(index, 1);
     localStorage.setItem('brands', JSON.stringify(brands));
     
-    // Also remove from brandSubBrands if it exists
-    let brandSubBrands = JSON.parse(localStorage.getItem('brandSubBrands') || '{}');
-    if (brandSubBrands[deletedBrand]) {
-        delete brandSubBrands[deletedBrand];
-        localStorage.setItem('brandSubBrands', JSON.stringify(brandSubBrands));
+    // Remove from brandFlavors
+    let brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+    if (brandFlavors[deletedBrand]) {
+        delete brandFlavors[deletedBrand];
+        localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
     }
-    
-    // IMPORTANT: Do NOT automatically recreate brands from products
-    // Brands are only added manually - this prevents auto-recreation
     
     loadBrands();
     populateBrandAndFlavorSelects();
@@ -1568,14 +1920,14 @@ function createBackup() {
     }
 }
 
-// Clear all products, brands, sub-brands, and flavors
+// Clear all products, brands, and flavors
 function clearAllData() {
-    if (!confirm('⚠️ WARNING: This will delete ALL products, brands, sub-brands, and flavors!\n\nThis action cannot be undone. Are you absolutely sure?')) {
+    if (!confirm('⚠️ WARNING: This will delete ALL products, brands, and flavors!\n\nThis action cannot be undone. Are you absolutely sure?')) {
         return;
     }
     
     // Double confirmation
-    if (!confirm('This is your last chance. Click OK to permanently delete:\n- All products/items\n- All brands\n- All sub-brands\n- All flavors')) {
+    if (!confirm('This is your last chance. Click OK to permanently delete:\n- All products/items\n- All brands\n- All flavors')) {
         return;
     }
     
@@ -1586,8 +1938,6 @@ function clearAllData() {
         // Clear brands
         localStorage.setItem('brands', JSON.stringify([]));
         
-        // Clear brand-sub-brand mappings
-        localStorage.setItem('brandSubBrands', JSON.stringify({}));
         
         // Clear flavors
         localStorage.setItem('flavors', JSON.stringify([]));
@@ -1606,7 +1956,7 @@ function clearAllData() {
         populateBrandAndFlavorSelects();
         updateDashboardStats();
         
-        alert('✅ All data cleared successfully! You can now manually add brands, sub-brands, flavors, and products again.');
+        alert('✅ All data cleared successfully! You can now manually add brands, flavors, and products again.');
     } catch (error) {
         console.error('Clear data error:', error);
         alert('Error clearing data. Please try again.');

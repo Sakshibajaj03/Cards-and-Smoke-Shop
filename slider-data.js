@@ -41,3 +41,5 @@ window.getSliderImages = function() {
     // Return empty array if no images found
     return [];
 };
+
+
