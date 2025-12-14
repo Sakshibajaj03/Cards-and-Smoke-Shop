@@ -490,10 +490,45 @@ function initializeProducts() {
     
     // Initialize brands from products (only unique brands)
     const uniqueBrands = [...new Set(products.map(p => p.brand))];
-    const existingBrands = JSON.parse(localStorage.getItem(STORAGE_KEYS.BRANDS) || '[]');
-    const brandsToAdd = uniqueBrands.filter(b => !existingBrands.includes(b));
-    if (brandsToAdd.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify([...existingBrands, ...brandsToAdd]));
+    let existingBrands = JSON.parse(localStorage.getItem(STORAGE_KEYS.BRANDS) || '[]');
+    
+    // Normalize existing brands structure
+    if (existingBrands.length > 0 && typeof existingBrands[0] === 'object' && existingBrands[0].name) {
+        // New format - extract names
+        const existingBrandNames = existingBrands.map(b => b.name);
+        const brandsToAdd = uniqueBrands.filter(b => !existingBrandNames.includes(b));
+        if (brandsToAdd.length > 0) {
+            const maxOrder = existingBrands.length > 0 
+                ? Math.max(...existingBrands.map(b => b.displayOrder || 0))
+                : 0;
+            const newBrands = brandsToAdd.map((brand, index) => ({
+                name: brand,
+                displayOrder: maxOrder + index + 1
+            }));
+            localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify([...existingBrands, ...newBrands]));
+        }
+    } else {
+        // Old format - convert to new format
+        const existingBrandNames = existingBrands;
+        const brandsToAdd = uniqueBrands.filter(b => !existingBrandNames.includes(b));
+        if (brandsToAdd.length > 0) {
+            const normalizedExisting = existingBrands.map((brand, index) => ({
+                name: brand,
+                displayOrder: index + 1
+            }));
+            const newBrands = brandsToAdd.map((brand, index) => ({
+                name: brand,
+                displayOrder: existingBrands.length + index + 1
+            }));
+            localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify([...normalizedExisting, ...newBrands]));
+        } else if (existingBrands.length > 0 && typeof existingBrands[0] === 'string') {
+            // Convert existing old format to new format even if no new brands to add
+            const normalizedExisting = existingBrands.map((brand, index) => ({
+                name: brand,
+                displayOrder: index + 1
+            }));
+            localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(normalizedExisting));
+        }
     }
 
     console.log(`✅ Initialized ${products.length} products successfully!`);
@@ -865,10 +900,20 @@ function initializeHomePage() {
     updateStoreName();
 }
 
+// Helper function to normalize brands (for app.js)
+function normalizeBrandsForApp(brands) {
+    if (!Array.isArray(brands) || brands.length === 0) return [];
+    if (typeof brands[0] === 'object' && brands[0] !== null && brands[0].name) {
+        return brands.map(b => b.name);
+    }
+    return brands; // Already array of strings
+}
+
 // Filter functions
 function initFilters() {
-    const brands = JSON.parse(localStorage.getItem(STORAGE_KEYS.BRANDS));
-    const flavors = JSON.parse(localStorage.getItem(STORAGE_KEYS.FLAVORS));
+    let brands = JSON.parse(localStorage.getItem(STORAGE_KEYS.BRANDS) || '[]');
+    brands = normalizeBrandsForApp(brands); // Normalize to array of names
+    const flavors = JSON.parse(localStorage.getItem(STORAGE_KEYS.FLAVORS) || '[]');
     
     const brandFilter = document.getElementById('brandFilter');
     const flavorFilter = document.getElementById('flavorFilter');

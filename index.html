@@ -303,20 +303,47 @@
         }
         window.closeUpdateMessage = closeUpdateMessage;
         
+        // Helper function to normalize brands (convert old format to new format)
+        function normalizeBrandsForIndex(brands) {
+            if (!Array.isArray(brands) || brands.length === 0) return [];
+            
+            // Check if already in new format (array of objects)
+            if (typeof brands[0] === 'object' && brands[0] !== null && brands[0].name) {
+                return brands;
+            }
+            
+            // Convert old format (array of strings) to new format (array of objects)
+            return brands.map((brand, index) => ({
+                name: brand,
+                displayOrder: index + 1
+            }));
+        }
+        
         // Load brands from localStorage
         function loadBrands() {
             const brandsGrid = document.getElementById('brandsGrid');
             if (!brandsGrid) return;
             
-            const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+            let brands = JSON.parse(localStorage.getItem('brands') || '[]');
             const brandSubBrands = JSON.parse(localStorage.getItem('brandSubBrands') || '{}');
+            
+            // Normalize brands structure
+            brands = normalizeBrandsForIndex(brands);
+            
+            // Sort brands by displayOrder (lower number appears first)
+            brands.sort((a, b) => {
+                const orderA = a.displayOrder || 999;
+                const orderB = b.displayOrder || 999;
+                return orderA - orderB;
+            });
             
             if (brands.length === 0) {
                 brandsGrid.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #6b7280; grid-column: 1 / -1;"><i class="fas fa-tags" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i><p style="font-size: 18px; margin-bottom: 10px;">No brands available</p><p style="font-size: 14px; opacity: 0.7;">Go to Admin Panel to add brands</p></div>';
                 return;
             }
             
-            brandsGrid.innerHTML = brands.map(brand => {
+            brandsGrid.innerHTML = brands.map(brandObj => {
+                const brand = brandObj.name || brandObj; // Support both formats during transition
                 const subBrands = brandSubBrands[brand] || [];
                 const subBrandsCount = subBrands.length;
                 const isActive = window.currentBrandFilter === brand;

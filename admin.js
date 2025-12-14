@@ -94,7 +94,8 @@ document.addEventListener('click', function(e) {
 // Update Dashboard Statistics
 function updateDashboardStats() {
     const products = JSON.parse(localStorage.getItem('products') || '[]');
-    const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+    const brands = getBrands();
+    const brandNames = getBrandNames(brands);
     const flavors = JSON.parse(localStorage.getItem('flavors') || '[]');
     const sliderImages = JSON.parse(localStorage.getItem('sliderImages') || '[]');
     
@@ -104,7 +105,7 @@ function updateDashboardStats() {
     const totalSlidersEl = document.getElementById('totalSliders');
     
     if (totalProductsEl) totalProductsEl.textContent = products.length;
-    if (totalBrandsEl) totalBrandsEl.textContent = brands.length;
+    if (totalBrandsEl) totalBrandsEl.textContent = brandNames.length;
     if (totalFlavorsEl) totalFlavorsEl.textContent = flavors.length;
     if (totalSlidersEl) totalSlidersEl.textContent = sliderImages.filter(img => img).length;
 }
@@ -256,9 +257,37 @@ window.getSliderImages = function() {
 }
 window.generateSliderDataFile = generateSliderDataFile;
 
+// Helper function to normalize brands (convert old format to new format)
+function normalizeBrands(brands) {
+    if (!Array.isArray(brands) || brands.length === 0) return [];
+    
+    // Check if already in new format (array of objects)
+    if (typeof brands[0] === 'object' && brands[0] !== null && brands[0].name) {
+        return brands;
+    }
+    
+    // Convert old format (array of strings) to new format (array of objects)
+    return brands.map((brand, index) => ({
+        name: brand,
+        displayOrder: index + 1
+    }));
+}
+
+// Helper function to get brand names array (for backward compatibility)
+function getBrandNames(brands) {
+    const normalized = normalizeBrands(brands);
+    return normalized.map(b => b.name);
+}
+
+// Helper function to get brands with proper structure
+function getBrands() {
+    const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+    return normalizeBrands(brands);
+}
+
 // Unified Brands & Flavors Management
 function loadBrands() {
-    const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+    let brands = getBrands(); // Get normalized brands
     const brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}'); // New: flavors assigned to brands
     const products = JSON.parse(localStorage.getItem('products') || '[]');
     const allFlavors = getAllFlavorsFromProducts(); // Get all unique flavors from products
@@ -279,8 +308,21 @@ function loadBrands() {
     
     if (emptyState) emptyState.style.display = 'none';
     
-    brandsList.innerHTML = brands.map((brand, index) => {
+    // Helper function to escape HTML
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+    
+    brandsList.innerHTML = brands.map((brandObj, index) => {
+        const brand = brandObj.name || brandObj; // Support both formats during transition
+        const displayOrder = brandObj.displayOrder !== undefined ? brandObj.displayOrder : (index + 1);
         const assignedFlavors = brandFlavors[brand] || [];
+        
+        // Escape HTML and JS for safe use in HTML and onclick handlers
+        const safeBrand = escapeHtml(brand);
+        const safeBrandJs = brand.replace(/'/g, "\\'").replace(/\\/g, '\\\\');
         const brandProducts = products.filter(p => (p.brand || '').toUpperCase() === brand.toUpperCase());
         const productCount = brandProducts.length;
         
@@ -310,17 +352,24 @@ function loadBrands() {
                             </div>
                             <div style="flex: 1;">
                                 <h3 style="margin: 0; font-size: 22px; font-weight: 700; color: #1f2937; display: flex; align-items: center; gap: 10px;">
-                                    <span id="brandNameDisplay_${index}">${brand}</span>
-                                    <button onclick="editBrandName(${index}, '${brand}')" style="background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: #6b7280;" title="Edit brand name">
+                                    <span id="brandNameDisplay_${index}">${safeBrand}</span>
+                                    <button onclick="editBrandName(${index}, '${safeBrandJs}')" style="background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; color: #6b7280;" title="Edit brand name">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 </h3>
-                                <div style="display: flex; gap: 15px; margin-top: 8px;">
+                                <div style="display: flex; gap: 15px; margin-top: 8px; flex-wrap: wrap;">
                                     <span style="display: inline-flex; align-items: center; gap: 5px; background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 13px;">
                                         <i class="fas fa-box"></i> ${productCount} Products
                                     </span>
                                     <span style="display: inline-flex; align-items: center; gap: 5px; background: #f0fdf4; color: #065f46; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 13px;">
                                         <i class="fas fa-palette"></i> ${allBrandFlavors.length} Flavors
+                                    </span>
+                                    <span style="display: inline-flex; align-items: center; gap: 8px; background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 13px;">
+                                        <i class="fas fa-sort-numeric-down"></i> Display Order: 
+                                        <input type="number" id="displayOrder_${index}" value="${displayOrder}" min="1" 
+                                               onchange="updateBrandDisplayOrder(${index}, '${safeBrandJs}', this.value)" 
+                                               style="width: 60px; padding: 2px 6px; border: 1px solid #fbbf24; border-radius: 4px; text-align: center; font-weight: 700; color: #92400e; background: white;"
+                                               title="Change display order (lower number = appears first on index page)">
                                     </span>
                                 </div>
                             </div>
@@ -337,7 +386,7 @@ function loadBrands() {
                         <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 8px;">
                             <i class="fas fa-palette"></i> Assigned Flavors
                         </h4>
-                        <button onclick="showAssignFlavorModal('${brand}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                        <button onclick="showAssignFlavorModal('${safeBrandJs}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;">
                             <i class="fas fa-plus"></i> Assign Flavor
                         </button>
                     </div>
@@ -346,11 +395,13 @@ function loadBrands() {
                             ? allBrandFlavors.map((flavor, fIndex) => {
                                 const isAssigned = assignedFlavors.includes(flavor);
                                 const isUsed = usedFlavors.has(flavor);
+                                const safeFlavor = escapeHtml(flavor);
+                                const safeFlavorJs = flavor.replace(/'/g, "\\'").replace(/\\/g, '\\\\');
                                 return `
                                     <span class="flavor-tag" style="display: inline-flex; align-items: center; gap: 6px; background: ${isUsed ? '#dbeafe' : '#f0fdf4'}; color: ${isUsed ? '#1e40af' : '#065f46'}; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid ${isUsed ? '#93c5fd' : '#86efac'};">
-                                        ${flavor}
+                                        ${safeFlavor}
                                         ${isUsed ? '<i class="fas fa-check-circle" style="font-size: 11px;" title="Used in products"></i>' : ''}
-                                        ${isAssigned ? `<button onclick="removeFlavorFromBrand('${brand}', '${flavor}')" style="background: none; border: none; color: ${isUsed ? '#1e40af' : '#065f46'}; cursor: pointer; padding: 0; margin-left: 4px; font-size: 12px; opacity: 0.7;" title="Remove flavor">
+                                        ${isAssigned ? `<button onclick="removeFlavorFromBrand('${safeBrandJs}', '${safeFlavorJs}')" style="background: none; border: none; color: ${isUsed ? '#1e40af' : '#065f46'}; cursor: pointer; padding: 0; margin-left: 4px; font-size: 12px; opacity: 0.7;" title="Remove flavor">
                                             <i class="fas fa-times"></i>
                                         </button>` : ''}
                                     </span>
@@ -405,7 +456,8 @@ function getAllFlavorsFromProducts() {
 }
 
 function updateBrandFlavorStats(brands, brandFlavors, products) {
-    const totalBrands = brands.length;
+    const brandNames = getBrandNames(brands);
+    const totalBrands = brandNames.length;
     const totalFlavors = getAllFlavorsFromProducts().length;
     const totalProducts = products.length;
     
@@ -599,15 +651,45 @@ function editBrandInline(index, currentName) {
     input.select();
 }
 
+// Update brand display order
+function updateBrandDisplayOrder(index, brandName, newOrder) {
+    let brands = getBrands();
+    const orderNum = parseInt(newOrder) || 1;
+    
+    if (orderNum < 1) {
+        alert('Display order must be at least 1');
+        loadBrands();
+        return;
+    }
+    
+    // Find the brand and update its order
+    const brandIndex = brands.findIndex(b => (b.name || b) === brandName);
+    if (brandIndex !== -1) {
+        brands[brandIndex].displayOrder = orderNum;
+        // Save normalized brands
+        localStorage.setItem('brands', JSON.stringify(brands));
+        loadBrands();
+        updateDashboardStats();
+    }
+}
+window.updateBrandDisplayOrder = updateBrandDisplayOrder;
+
 function updateBrandName(index, oldName, newName) {
-    let brands = JSON.parse(localStorage.getItem('brands') || '[]');
-    if (brands.includes(newName)) {
+    let brands = getBrands();
+    const brandNames = getBrandNames(brands);
+    
+    if (brandNames.includes(newName)) {
         alert('Brand name already exists!');
         loadBrands();
         return;
     }
     
-    brands[index] = newName;
+    // Update brand name while preserving display order
+    if (brands[index]) {
+        brands[index].name = newName;
+    } else {
+        brands[index] = { name: newName, displayOrder: brands.length + 1 };
+    }
     localStorage.setItem('brands', JSON.stringify(brands));
     
     // Update brandFlavors
@@ -643,13 +725,20 @@ function addBrand() {
         return;
     }
     
-    let brands = JSON.parse(localStorage.getItem('brands') || '[]');
-    if (brands.includes(brandName)) {
+    let brands = getBrands();
+    const brandNames = getBrandNames(brands);
+    
+    if (brandNames.includes(brandName)) {
         alert('Brand already exists!');
         return;
     }
     
-    brands.push(brandName);
+    // Get the highest display order and add 1
+    const maxOrder = brands.length > 0 
+        ? Math.max(...brands.map(b => b.displayOrder || 0))
+        : 0;
+    
+    brands.push({ name: brandName, displayOrder: maxOrder + 1 });
     localStorage.setItem('brands', JSON.stringify(brands));
     input.value = '';
     loadBrands();
@@ -668,10 +757,11 @@ window.createAndAssignFlavor = createAndAssignFlavor;
 function deleteBrand(index) {
     if (!confirm('Are you sure you want to delete this brand? This will also remove all assigned flavors.')) return;
     
-    let brands = JSON.parse(localStorage.getItem('brands') || '[]');
+    let brands = getBrands();
     
     // Get the brand name before deleting
-    const deletedBrand = brands[index];
+    const deletedBrandObj = brands[index];
+    const deletedBrand = deletedBrandObj.name || deletedBrandObj;
     
     // Remove the brand from the array
     brands.splice(index, 1);
@@ -1112,7 +1202,8 @@ function saveFeaturedProducts() {
 
 // Products Management
 function populateBrandAndFlavorSelects() {
-    const brands = JSON.parse(localStorage.getItem('brands') || '[]');
+    const brands = getBrands();
+    const brandNames = getBrandNames(brands);
     const flavors = JSON.parse(localStorage.getItem('flavors') || '[]');
     
     const brandSelect = document.getElementById('productBrand');
@@ -1120,7 +1211,7 @@ function populateBrandAndFlavorSelects() {
     if (brandSelect) {
         // Only show brands that are explicitly in the brands list - DO NOT auto-add from products
         brandSelect.innerHTML = '<option value="">Select Brand</option>' + 
-            brands.map(brand => `<option value="${brand}">${brand}</option>`).join('');
+            brandNames.map(brand => `<option value="${brand}">${brand}</option>`).join('');
         
         // Allow manual entry - user can type a brand name even if not in list
         // This prevents auto-adding brands from products
@@ -1681,10 +1772,11 @@ function exportData() {
             return img;
         });
         
+        const brands = getBrands(); // Get normalized brands structure
         const data = {
             storeName: localStorage.getItem('storeName') || 'Premium Store',
             products: productsWithFileRefs,
-            brands: JSON.parse(localStorage.getItem('brands') || '[]'),
+            brands: brands, // Export normalized brand structure
             flavors: JSON.parse(localStorage.getItem('flavors') || '[]'),
             sliderImages: sliderImagesWithRefs,
             featuredProducts: featuredProducts,
@@ -1845,7 +1937,9 @@ function importData(input) {
             }
             
             if (data.brands && Array.isArray(data.brands)) {
-                localStorage.setItem('brands', JSON.stringify(data.brands));
+                // Normalize brands structure (convert old format to new format if needed)
+                const normalizedBrands = normalizeBrands(data.brands);
+                localStorage.setItem('brands', JSON.stringify(normalizedBrands));
             }
             
             if (data.flavors && Array.isArray(data.flavors)) {
@@ -1889,10 +1983,11 @@ function importData(input) {
 
 function createBackup() {
     try {
+        const brands = getBrands(); // Get normalized brands structure
         const data = {
             storeName: localStorage.getItem('storeName') || 'Premium Store',
             products: JSON.parse(localStorage.getItem('products') || '[]'),
-            brands: JSON.parse(localStorage.getItem('brands') || '[]'),
+            brands: brands, // Use normalized brand structure
             flavors: JSON.parse(localStorage.getItem('flavors') || '[]'),
             sliderImages: JSON.parse(localStorage.getItem('sliderImages') || '[]'),
             featuredProducts: JSON.parse(localStorage.getItem('featuredProducts') || '[]'),
@@ -2838,10 +2933,18 @@ function initializeProductsFromCode() {
     
     // Initialize brands from products (only unique brands, don't overwrite existing)
     const uniqueBrands = [...new Set(products.map(p => p.brand))];
-    const existingBrands = JSON.parse(localStorage.getItem('brands') || '[]');
-    const brandsToAdd = uniqueBrands.filter(b => !existingBrands.includes(b));
+    const existingBrands = getBrands(); // Get normalized brands
+    const existingBrandNames = getBrandNames(existingBrands);
+    const brandsToAdd = uniqueBrands.filter(b => !existingBrandNames.includes(b));
     if (brandsToAdd.length > 0) {
-        localStorage.setItem('brands', JSON.stringify([...existingBrands, ...brandsToAdd]));
+        const maxOrder = existingBrands.length > 0 
+            ? Math.max(...existingBrands.map(b => b.displayOrder || 0))
+            : 0;
+        const newBrands = brandsToAdd.map((brand, index) => ({
+            name: brand,
+            displayOrder: maxOrder + index + 1
+        }));
+        localStorage.setItem('brands', JSON.stringify([...existingBrands, ...newBrands]));
     }
 
     console.log(`✅ Admin: Initialized ${products.length} products successfully!`);
