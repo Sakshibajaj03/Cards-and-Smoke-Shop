@@ -2,6 +2,26 @@
 
 A professional, fully-featured e-commerce website with admin panel for managing products, brands, flavors, and images.
 
+## 🚀 Portability - Copy to Any PC
+
+This website is designed to be **completely portable**. Simply copy the entire folder to any Windows PC and it will work exactly the same way with all your data, images, and settings preserved.
+
+### What's Included for Portability:
+- ✅ **Embedded Images**: All product and slider images are embedded as base64 in the code
+- ✅ **Automatic Data Initialization**: All store data initializes automatically on first load
+- ✅ **localStorage Persistence**: Settings, products, brands, and cart data persist locally
+- ✅ **No External Dependencies**: Everything works offline without internet connection
+- ✅ **Cross-PC Compatibility**: Works identically on any Windows computer
+
+### How to Transfer to Another PC:
+1. Copy the entire `Website - Copy` folder
+2. Paste it anywhere on the new computer
+3. Open `index.html` in any web browser
+4. All your products, images, settings, and data will be there!
+
+### Excel Import for Bulk Data Entry:
+Use the admin panel's Excel import feature to quickly add hundreds of products with brands and flavors automatically created.
+
 ## Features
 
 ### Customer Features
@@ -33,8 +53,17 @@ A professional, fully-featured e-commerce website with admin panel for managing 
 2. **Data Export & Import**
    - **Export All Data**: Download all store data as JSON file
    - **Import Data**: Import data from another computer
+   - **Import Excel with Brands**: Upload Excel file with products, brands, and flavors
+   - **Download Excel Template**: Get a sample Excel file to fill out
    - **Create Backup**: Create a backup including cart data
    - Perfect for transferring your store to another PC
+
+3. **Excel Import Features**
+   - Automatically creates brands if they don't exist
+   - Automatically creates flavors if they don't exist
+   - Creates brand-flavor associations automatically
+   - Supports multiple flavors per product (comma or semicolon separated)
+   - Includes help and template download
 
 3. **Slider Images Management**
    - Upload 5 slider images (one for each slide)

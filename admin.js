@@ -2,9 +2,12 @@
 
 // Initialize admin page
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all data structures for portability
+    initializeAllData();
+
     // Initialize products from code first (only if products don't exist)
     initializeProductsFromCode();
-    
+
     loadStoreSettings();
     loadSliderImages();
     loadBrands();
@@ -13,10 +16,75 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFeaturedProducts();
     populateBrandAndFlavorSelects();
     updateDashboardStats();
-    
+
     // Show dashboard by default
     showSection('dashboard');
 });
+
+// Initialize all data structures to ensure portability
+function initializeAllData() {
+    // Initialize store name
+    if (!localStorage.getItem('storeName')) {
+        localStorage.setItem('storeName', 'Premium Vape Shop');
+    }
+
+    // Initialize products array
+    if (!localStorage.getItem('products')) {
+        localStorage.setItem('products', JSON.stringify([]));
+    }
+
+    // Initialize brands array with proper structure
+    if (!localStorage.getItem('brands')) {
+        localStorage.setItem('brands', JSON.stringify([]));
+    }
+
+    // Initialize brand-flavor relationships
+    if (!localStorage.getItem('brandFlavors')) {
+        localStorage.setItem('brandFlavors', JSON.stringify({}));
+    }
+
+    // Initialize brand-subbrand relationships
+    if (!localStorage.getItem('brandSubBrands')) {
+        localStorage.setItem('brandSubBrands', JSON.stringify({}));
+    }
+
+    // Initialize flavors array
+    if (!localStorage.getItem('flavors')) {
+        localStorage.setItem('flavors', JSON.stringify([]));
+    }
+
+    // Initialize slider images
+    if (!localStorage.getItem('sliderImages')) {
+        let sliderImages = [];
+        // Try to get from embedded data if available
+        if (typeof window.getSliderImages === 'function') {
+            sliderImages = window.getSliderImages();
+        }
+        // If no embedded images, use defaults
+        if (!sliderImages || sliderImages.length === 0) {
+            sliderImages = [
+                'images/slider/slide1.jpg',
+                'images/slider/slide2.jpg',
+                'images/slider/slide3.jpg',
+                'images/slider/slide4.jpg',
+                'images/slider/slide5.jpg'
+            ];
+        }
+        localStorage.setItem('sliderImages', JSON.stringify(sliderImages));
+    }
+
+    // Initialize featured products
+    if (!localStorage.getItem('featuredProducts')) {
+        localStorage.setItem('featuredProducts', JSON.stringify(['', '', '', '']));
+    }
+
+    // Initialize cart
+    if (!localStorage.getItem('cart')) {
+        localStorage.setItem('cart', JSON.stringify([]));
+    }
+
+    console.log('All data structures initialized for portability');
+}
 
 // Sidebar Navigation
 function showSection(sectionId) {
@@ -2519,7 +2587,21 @@ function initializeProductsFromCode() {
     // Check if products already exist
     const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
     if (existingProducts.length > 0) {
+        console.log('Products already exist, skipping initialization');
         return; // Products already exist, don't initialize
+    }
+
+    console.log('Initializing products with embedded images...');
+
+    // Helper function to get embedded image
+    function getProductImage(imagePath) {
+        // First try embedded images
+        if (typeof getEmbeddedImage === 'function') {
+            const embedded = getEmbeddedImage(imagePath);
+            if (embedded) return embedded;
+        }
+        // Fallback to regular image path
+        return 'images/' + imagePath;
     }
 
     const products = [
@@ -2533,18 +2615,18 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Blue Razz Ice',
             flavors: [
-                { name: 'Blue Razz Ice', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Fresh Mint', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Infinite Swirl', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Miami Mint', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Orange Ice', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Peach Raspberry', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Sour Apple', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Sour Strawberry', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Triple Berry', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Watermelon Ice', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' }
+                { name: 'Blue Razz Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Fresh Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Infinite Swirl', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Miami Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Orange Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Peach Raspberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Sour Apple', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Sour Strawberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Triple Berry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Watermelon Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') }
             ],
-            image: 'images/yovo/yovo_jb50000_pod_5pk.jpg',
+            image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg'),
             description: 'YOVO JB50000 Pod 5pk - Premium vaping experience with long-lasting pods. Master Case: 20 x 5pk.',
             specs: ['50000 Puffs', '5 Pods per pack', 'Rechargeable']
         },
@@ -2558,9 +2640,9 @@ function initializeProductsFromCode() {
             flavor: 'Miami Mint',
             flavors: [{
                 name: 'Miami Mint',
-                image: 'images/yovo/yovo_jb50000_kit_5pk.jpg'
+                image: getProductImage('yovo/yovo_jb50000_kit_5pk.jpg')
             }],
-            image: 'images/yovo/yovo_jb50000_kit_5pk.jpg',
+            image: getProductImage('yovo/yovo_jb50000_kit_5pk.jpg'),
             description: 'YOVO JB50000 Kit 5pk - Complete starter kit with 5 pods. Master Case: 18 x 5pk.',
             specs: ['50000 Puffs', '5 Kits per pack', 'Complete Starter Kit']
         },
@@ -2575,10 +2657,10 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Orange Mint',
             flavors: [
-                { name: 'Orange Mint', image: 'images/geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg' },
-                { name: 'Blue Razz Ice', image: 'images/geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg' }
+                { name: 'Orange Mint', image: getProductImage('geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg') },
+                { name: 'Blue Razz Ice', image: getProductImage('geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg') }
             ],
-            image: 'images/geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg',
+            image: getProductImage('geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg'),
             description: 'Geek Bar Pulse X 25000 Puffs - World\'s first 3D curved screen with advanced technology. Experience ultimate vaping pleasure with 18mL e-liquid, 5% (50mg) nicotine strength, and 820mAh battery capacity.',
             specs: ['25000 Puffs', '5 Devices per pack', '3D Curved Screen', 'Rechargeable', '18mL E-liquid', '5% (50mg) Nicotine', '820mAh Battery']
         },
@@ -2591,10 +2673,10 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Ginger Ale',
             flavors: [
-                { name: 'Ginger Ale', image: 'images/geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg' },
-                { name: 'Tropical Rainbow', image: 'images/geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg' }
+                { name: 'Ginger Ale', image: getProductImage('geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg') },
+                { name: 'Tropical Rainbow', image: getProductImage('geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg') }
             ],
-            image: 'images/geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg',
+            image: getProductImage('geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg'),
             description: 'Geek Bar Meloso Max 9000 is loaded with 14mL of nic salt e-liquid and powered by a 600mAh battery, ensuring robust performance. The dual mesh coils deliver rich clouds and authentic flavors, while the adjustable airflow lets you customize your vaping style.',
             specs: ['9000 Puffs per disposable', '14mL e-liquid capacity', '5% nicotine strength (50mg/mL)', '600mAh battery capacity', 'Dual mesh coils', 'Adjustable airflow', '5 Devices per pack']
         },
@@ -2608,9 +2690,9 @@ function initializeProductsFromCode() {
             flavor: 'Watermelon Ice',
             flavors: [{
                 name: 'Watermelon Ice',
-                image: 'images/ria/ria_nv_30000_puffs_5pk.jpg'
+                image: getProductImage('ria/ria_nv_30000_puffs_5pk.jpg')
             }],
-            image: 'images/ria/ria_nv_30000_puffs_5pk.jpg',
+            image: getProductImage('ria/ria_nv_30000_puffs_5pk.jpg'),
             description: 'RIA NV 30000 Puffs - High capacity disposable vape with exceptional flavor.',
             specs: ['30000 Puffs', '5 Devices per pack', 'Pre-filled']
         },
@@ -2624,9 +2706,9 @@ function initializeProductsFromCode() {
             flavor: 'Standard',
             flavors: [{
                 name: 'Standard',
-                image: 'images/digi flavor/digi_flavor_brk_battery_5pk.jpg'
+                image: getProductImage('digi flavor/digi_flavor_brk_battery_5pk.jpg')
             }],
-            image: 'images/digi flavor/digi_flavor_brk_battery_5pk.jpg',
+            image: getProductImage('digi flavor/digi_flavor_brk_battery_5pk.jpg'),
             description: 'Digi Flavor BRK Battery 5pk - Rechargeable battery pack for DripFlavor devices.',
             specs: ['Rechargeable Battery', '5 Batteries per pack', 'Compatible with DripFlavor']
         },
@@ -2641,22 +2723,22 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Blue Razz Ice',
             flavors: [
-                { name: 'Banana Taffy Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_banana_taffy_ice.jpg' },
-                { name: 'Blue Razz Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Clear', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Cherry Strazz', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Cola Slurpee', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Christmas Edition - Blue Razz Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Icy Mint', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Lemon Refresher', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Mango Tango', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Pina Coco', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Sour Blue Dust', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Strawmelon Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Tobacco', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'White Gummy Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' }
+                { name: 'Banana Taffy Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_banana_taffy_ice.jpg') },
+                { name: 'Blue Razz Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Clear', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Cherry Strazz', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Cola Slurpee', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Christmas Edition - Blue Razz Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Icy Mint', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Lemon Refresher', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Mango Tango', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Pina Coco', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Sour Blue Dust', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Strawmelon Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'Tobacco', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
+                { name: 'White Gummy Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') }
             ],
-            image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg',
+            image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg'),
             description: 'VIHO TRX 50000 Puffs - Ultra-long lasting disposable vape with premium quality. Master Case: 20 x 5pk.',
             specs: ['50000 Puffs', '5 Devices per pack', 'Pre-filled', '100% E-Liquid', '100% Battery']
         },
@@ -2670,9 +2752,9 @@ function initializeProductsFromCode() {
             flavor: 'Tobacco Mint',
             flavors: [{
                 name: 'Tobacco Mint',
-                image: 'images/viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg'
+                image: getProductImage('viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg')
             }],
-            image: 'images/viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg',
+            image: getProductImage('viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg'),
             description: 'VIHO Supercharge PRO 20000 Puffs - High-performance disposable vape with refreshing mint flavor.',
             specs: ['20000 Puffs', '5 Devices per pack', 'Pre-filled', '100% E-Liquid', '100% Battery']
         },
@@ -2688,9 +2770,9 @@ function initializeProductsFromCode() {
             flavor: 'Menthol',
             flavors: [{
                 name: 'Menthol',
-                image: 'images/juul/juul_pods_menthol.jpg'
+                image: getProductImage('juul/juul_pods_menthol.jpg')
             }],
-            image: 'images/juul/juul_pods_menthol.jpg',
+            image: getProductImage('juul/juul_pods_menthol.jpg'),
             description: 'JUUL Pods - Classic JUUL pods with 5.0% nicotine, 4 pods per pack.',
             specs: ['5.0% Nicotine', '4 Pods per pack', 'Menthol flavor', 'Compatible with JUUL device']
         },
@@ -2705,10 +2787,10 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Code Blue',
             flavors: [
-                { name: 'Code Blue', image: 'images/raz/raz_rx_50000_puffs_5pk.jpg' },
-                { name: 'Code White', image: 'images/raz/raz_rx_50000_puffs_5pk.jpg' }
+                { name: 'Code Blue', image: getProductImage('raz/raz_rx_50000_puffs_5pk.jpg') },
+                { name: 'Code White', image: getProductImage('raz/raz_rx_50000_puffs_5pk.jpg') }
             ],
-            image: 'images/raz/raz_rx_50000_puffs_5pk.jpg',
+            image: getProductImage('raz/raz_rx_50000_puffs_5pk.jpg'),
             description: 'RAZ RX 50000 Puffs - Advanced disposable vape with screen display showing battery and puff count. Master Case: 30 x 5pk.',
             specs: ['50000 Puffs', '5 Devices per pack', 'Digital Display', 'Pre-filled']
         },
@@ -2722,9 +2804,9 @@ function initializeProductsFromCode() {
             flavor: 'Watermelon Ice',
             flavors: [{
                 name: 'Watermelon Ice',
-                image: 'images/ryl/ryl_classic_35000_puffs_5pk.jpg'
+                image: getProductImage('ryl/ryl_classic_35000_puffs_5pk.jpg')
             }],
-            image: 'images/ryl/ryl_classic_35000_puffs_5pk.jpg',
+            image: getProductImage('ryl/ryl_classic_35000_puffs_5pk.jpg'),
             description: 'RYL Classic 35000 Puffs - Classic design with premium performance and flavor.',
             specs: ['35000 Puffs', '5 Devices per pack', 'Pre-filled', 'Classic Design']
         },
@@ -2737,32 +2819,32 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Bangin Sour Berries',
             flavors: [
-                { name: 'Bangin Sour Berries', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg' },
-                { name: 'Black Cherry Peach', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_black_cherry_peach.jpg' },
-                { name: 'Blue Raz Ice', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Blue Raz Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Blueberry Watermelon', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg' },
-                { name: 'Cherry Strapple', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_cherry_strapple.jpg' },
-                { name: 'Georgia Peach', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Hawaiian Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Iced Blue Dragon', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Miami Mint', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'New York Mint', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Night Crawler', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Orange Pineapple Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Raspberry Limeade', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Sour Apple Ice', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Sour Raspberry Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Strawberry Burst', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Strawberry Kiwi Pear', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Strawberry Peach Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Triple Berry Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Triple Berry Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Tropical Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'White Grape Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Wintergreen', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' }
+                { name: 'Bangin Sour Berries', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg') },
+                { name: 'Black Cherry Peach', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_black_cherry_peach.jpg') },
+                { name: 'Blue Raz Ice', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Blue Raz Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Blueberry Watermelon', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg') },
+                { name: 'Cherry Strapple', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_cherry_strapple.jpg') },
+                { name: 'Georgia Peach', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Hawaiian Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Iced Blue Dragon', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Miami Mint', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'New York Mint', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Night Crawler', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Orange Pineapple Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Raspberry Limeade', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Sour Apple Ice', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Sour Raspberry Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Strawberry Burst', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Strawberry Kiwi Pear', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Strawberry Peach Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Triple Berry Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Triple Berry Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Tropical Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'White Grape Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Wintergreen', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') }
             ],
-            image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg',
+            image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg'),
             description: 'RAZ LTX 25000 Puffs - Premium disposable vape with exceptional flavor variety. Master Case: 30 x 5pk.',
             specs: ['25000 Puffs', '5 Devices per pack', 'Pre-filled']
         },
@@ -2775,12 +2857,12 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Bangin Sour Berries',
             flavors: [
-                { name: 'Bangin Sour Berries', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg' },
-                { name: 'Blueberry Watermelon', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg' },
-                { name: 'New York Mint', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Razzle Dazzle', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' }
+                { name: 'Bangin Sour Berries', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg') },
+                { name: 'Blueberry Watermelon', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg') },
+                { name: 'New York Mint', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
+                { name: 'Razzle Dazzle', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') }
             ],
-            image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg',
+            image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg'),
             description: 'RAZ LTX 25000 Puffs 0% Nicotine - Zero nicotine option with full flavor experience. Price Increase July 25, 2025. Master Case: 30 x 5pk.',
             specs: ['25000 Puffs', '0% Nicotine', '5 Devices per pack', 'Pre-filled', 'Zero Nicotine']
         },
@@ -2794,9 +2876,9 @@ function initializeProductsFromCode() {
             flavor: 'Watermelon Ice',
             flavors: [{
                 name: 'Watermelon Ice',
-                image: 'images/raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg'
+                image: getProductImage('raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg')
             }],
-            image: 'images/raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg',
+            image: getProductImage('raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg'),
             description: 'RAZ TN9000 0% Nicotine - Zero nicotine disposable vape with refreshing watermelon ice flavor.',
             specs: ['9000 Puffs', '0% Nicotine', '5 Devices per pack', 'Pre-filled', 'Zero Nicotine']
         },
@@ -2811,11 +2893,11 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Clear',
             flavors: [
-                { name: 'Clear', image: 'images/air bar/air_bar_nex_6500_puffs.jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/air_bar_nex_6500_puffs.jpg' },
-                { name: 'Strawberry Mango', image: 'images/air bar/air_bar_nex_6500_puffs.jpg' }
+                { name: 'Clear', image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg') },
+                { name: 'Cool Mint', image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg') },
+                { name: 'Strawberry Mango', image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg') }
             ],
-            image: 'images/air bar/air_bar_nex_6500_puffs.jpg',
+            image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg'),
             description: 'Air Bar Nex 6500 Puffs - Compact and powerful disposable vape. NOTE: DAILY LIMIT PRODUCT. ONLY 1 ORDER PER DAY. Price Increase Sept 22, 2025.',
             specs: ['6500 Puffs', 'Pre-filled', 'Disposable', 'Daily Limit: 1 Order Per Day']
         },
@@ -2828,18 +2910,18 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Blue Mint',
             flavors: [
-                { name: 'Blue Mint', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Blue Razz Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_razz_ice.jpg' },
-                { name: 'Blueberry Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Clear', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Coffee', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_mint.jpg' },
-                { name: 'Juicy Watermelon Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Miami Mint', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Sakura Grape', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Sour Apple Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' }
+                { name: 'Blue Mint', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Blue Razz Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_razz_ice.jpg') },
+                { name: 'Blueberry Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Clear', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Coffee', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Cool Mint', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_mint.jpg') },
+                { name: 'Juicy Watermelon Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Miami Mint', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Sakura Grape', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
+                { name: 'Sour Apple Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') }
             ],
-            image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg',
+            image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg'),
             description: 'Air Bar Aura 25000 Puffs - High-capacity disposable vape with vibrant design and premium flavors. Master Case: 30 x 5pk.',
             specs: ['25000 Puffs', '5 Devices per pack', 'Pre-filled', 'Vibrant Design']
         },
@@ -2852,23 +2934,23 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Love Story',
             flavors: [
-                { name: 'Blue Razz Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Blueberry Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Cherry Cola', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Clear', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Coffee', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Fcuking FAB', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Frozen Strawberry', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Frozen Watermelon', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Grape Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Juicy Peach Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Love Story', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Sour Apple Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Strawberry Watermelon', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Virginia Tobacco', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' }
+                { name: 'Blue Razz Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Blueberry Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Cherry Cola', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Clear', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Coffee', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Cool Mint', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Fcuking FAB', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Frozen Strawberry', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Frozen Watermelon', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Grape Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Juicy Peach Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Love Story', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Sour Apple Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Strawberry Watermelon', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
+                { name: 'Virginia Tobacco', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') }
             ],
-            image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg',
+            image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg'),
             description: 'Air Bar Diamond Spark 15000 Puffs - Sparkling design with exceptional flavor and performance.',
             specs: ['15000 Puffs', '5 Devices per pack', 'Pre-filled', 'Diamond Design']
         },
@@ -2881,13 +2963,13 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Cool Mint',
             flavors: [
-                { name: 'Blueberry Ice', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_blueberry_ice.jpg' },
-                { name: 'Clear', image: 'images/air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_cool_mint.jpg' },
-                { name: 'Miami Mint', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_miami_mint.jpg' },
-                { name: 'Watermelon Ice', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_watermelon_ice.jpg' }
+                { name: 'Blueberry Ice', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_blueberry_ice.jpg') },
+                { name: 'Clear', image: getProductImage('air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg') },
+                { name: 'Cool Mint', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_cool_mint.jpg') },
+                { name: 'Miami Mint', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_miami_mint.jpg') },
+                { name: 'Watermelon Ice', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_watermelon_ice.jpg') }
             ],
-            image: 'images/air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg',
+            image: getProductImage('air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg'),
             description: 'Air Bar Diamond+ 1000 Puffs - Compact disposable vape with 10 devices per pack.',
             specs: ['1000 Puffs per device', '10 Devices per pack', 'Pre-filled', 'Compact Design']
         },
@@ -2900,12 +2982,12 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Blueberry Mint',
             flavors: [
-                { name: 'Blueberry Mint', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' },
-                { name: 'Frozen Peach', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' },
-                { name: 'Virginia Tobacco', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' },
-                { name: 'Watermelon Candy', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' }
+                { name: 'Blueberry Mint', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') },
+                { name: 'Frozen Peach', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') },
+                { name: 'Virginia Tobacco', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') },
+                { name: 'Watermelon Candy', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') }
             ],
-            image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg',
+            image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg'),
             description: 'Air Bar Mini 2000 Puffs - Mini disposable vape with sweet candy flavors. Price Increase Sept 22, 2025.',
             specs: ['2000 Puffs', 'Pre-filled', 'Mini Size']
         },
@@ -2918,11 +3000,11 @@ function initializeProductsFromCode() {
             status: 'available',
             flavor: 'Black Cheese Cake',
             flavors: [
-                { name: 'Black Cheese Cake', image: 'images/air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_cheese_cake.jpg' },
-                { name: 'Berries Blast', image: 'images/air bar/Air Bar AB5000 10pk/air_bar_ab5000_berries_blast.jpg' },
-                { name: 'Black Ice', image: 'images/air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_ice.jpg' }
+                { name: 'Black Cheese Cake', image: getProductImage('air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_cheese_cake.jpg') },
+                { name: 'Berries Blast', image: getProductImage('air bar/Air Bar AB5000 10pk/air_bar_ab5000_berries_blast.jpg') },
+                { name: 'Black Ice', image: getProductImage('air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_ice.jpg') }
             ],
-            image: 'images/air bar/Air Bar AB5000 10pk/Air Bar AB5000 10pk.jpg',
+            image: getProductImage('air bar/Air Bar AB5000 10pk/Air Bar AB5000 10pk.jpg'),
             description: 'Air Bar AB5000 10pk - Value pack with 10 devices, perfect for sharing. Key Features: 10mL Pre-Filled E Liquid, 5% (50mg) Nicotine Strength, 1500mAh NON-Rechargeable Battery, Approximately 5000 Puffs, New PHC (Pre-Heating Coil) Technology.',
             specs: ['5000 Puffs per device', '10 Devices per pack', '10mL Pre-Filled E Liquid', '5% (50mg) Nicotine', '1500mAh Battery', 'PHC Technology', 'Pre-filled', 'Value Pack']
         }
@@ -2947,15 +3029,406 @@ function initializeProductsFromCode() {
         localStorage.setItem('brands', JSON.stringify([...existingBrands, ...newBrands]));
     }
 
+    // Initialize flavors from products (only unique flavors, don't overwrite existing)
+    const allFlavorsFromProducts = products.flatMap(p =>
+        p.flavors ? p.flavors.map(f => typeof f === 'string' ? f : f.name) : []
+    );
+    const uniqueFlavors = [...new Set(allFlavorsFromProducts.filter(f => f))];
+    const existingFlavors = JSON.parse(localStorage.getItem('flavors') || '[]');
+    const existingFlavorNames = existingFlavors.map(f => typeof f === 'string' ? f : f.name);
+    const flavorsToAdd = uniqueFlavors.filter(f => !existingFlavorNames.includes(f));
+
+    if (flavorsToAdd.length > 0) {
+        const newFlavors = flavorsToAdd.map(flavor => ({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            name: flavor
+        }));
+        localStorage.setItem('flavors', JSON.stringify([...existingFlavors, ...newFlavors]));
+    }
+
+    // Initialize brand-flavor relationships
+    const brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+    let brandFlavorsUpdated = false;
+
+    products.forEach(product => {
+        if (product.brand && product.flavors) {
+            if (!brandFlavors[product.brand]) {
+                brandFlavors[product.brand] = [];
+            }
+
+            const flavorNames = product.flavors.map(f => typeof f === 'string' ? f : f.name);
+            flavorNames.forEach(flavor => {
+                if (!brandFlavors[product.brand].includes(flavor)) {
+                    brandFlavors[product.brand].push(flavor);
+                    brandFlavorsUpdated = true;
+                }
+            });
+        }
+    });
+
+    if (brandFlavorsUpdated) {
+        localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+    }
+
     console.log(`✅ Admin: Initialized ${products.length} products successfully!`);
 }
 
 // Note: initializeProductsFromCode() is called in DOMContentLoaded event
 
+// Import products with brands and flavors from Excel
+function importProductsWithBrands() {
+    const fileInput = document.getElementById('importWithBrandsFileInput');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+// Handle Excel import with brands and flavors
+function handleFileImportWithBrands(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            // Get first worksheet
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            // Convert to JSON array
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                header: 1,
+                defval: ''
+            });
+
+            if (jsonData.length < 2) {
+                alert('Invalid Excel file! File must contain header and at least one product.');
+                event.target.value = '';
+                return;
+            }
+
+            // Get headers (first row)
+            const headers = jsonData[0].map(h => String(h).trim());
+            const importedProducts = [];
+            const newBrands = new Set();
+            const newFlavors = new Set();
+
+            // Process rows (skip header row)
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || row.length === 0) continue;
+
+                const product = {
+                    id: '',
+                    name: '',
+                    brand: '',
+                    flavors: [], // Store as array for multiple flavors
+                    price: 0,
+                    stock: 0,
+                    status: 'available',
+                    image: '',
+                    description: '',
+                    specs: []
+                };
+
+                headers.forEach((header, index) => {
+                    const value = row[index];
+                    const cleanValue = value !== undefined && value !== null ? String(value).trim() : '';
+
+                    if (cleanValue === '') return;
+
+                    switch(header.toLowerCase()) {
+                        case 'id':
+                            product.id = cleanValue;
+                            break;
+                        case 'name':
+                        case 'product name':
+                            product.name = cleanValue;
+                            break;
+                        case 'brand':
+                        case 'brand name':
+                            product.brand = cleanValue;
+                            if (cleanValue) newBrands.add(cleanValue);
+                            break;
+                        case 'flavor':
+                        case 'flavors':
+                            // Handle multiple flavors separated by comma or semicolon
+                            const flavorList = cleanValue.split(/[;,]/).map(f => f.trim()).filter(f => f);
+                            product.flavors = flavorList;
+                            flavorList.forEach(flavor => newFlavors.add(flavor));
+                            break;
+                        case 'price':
+                            product.price = parseFloat(cleanValue) || 0;
+                            break;
+                        case 'stock':
+                        case 'quantity':
+                            product.stock = parseInt(cleanValue) || 0;
+                            break;
+                        case 'status':
+                            product.status = cleanValue || 'available';
+                            break;
+                        case 'image':
+                        case 'image url':
+                            product.image = cleanValue;
+                            break;
+                        case 'description':
+                            product.description = cleanValue;
+                            break;
+                        case 'specs':
+                        case 'specifications':
+                            product.specs = cleanValue.split('\n').filter(s => s.trim());
+                            break;
+                    }
+                });
+
+                if (product.name && product.brand) {
+                    if (!product.id) {
+                        product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                    }
+                    importedProducts.push(product);
+                }
+            }
+
+            if (importedProducts.length === 0) {
+                alert('No valid products found in Excel file! Each product must have at least a name and brand.');
+                event.target.value = '';
+                return;
+            }
+
+            // Show summary and confirmation
+            let summary = `Found ${importedProducts.length} products to import.\n\n`;
+            summary += `New brands to be created: ${Array.from(newBrands).join(', ') || 'None'}\n`;
+            summary += `New flavors to be created: ${Array.from(newFlavors).join(', ') || 'None'}\n\n`;
+
+            summary += 'This will:\n';
+            summary += '• Add new brands to the brand list\n';
+            summary += '• Add new flavors to the flavor list\n';
+            summary += '• Import products with their brand and flavor associations\n\n';
+
+            const action = confirm(summary + 'Click OK to proceed with the import.');
+
+            if (action) {
+                // Add new brands
+                const existingBrands = getBrands();
+                const existingBrandNames = getBrandNames(existingBrands);
+                let brandsAdded = 0;
+
+                newBrands.forEach(brandName => {
+                    if (!existingBrandNames.includes(brandName)) {
+                        // Add new brand with default display order
+                        const maxOrder = Math.max(...existingBrands.map(b => b.displayOrder || 0), 0);
+                        existingBrands.push({
+                            name: brandName,
+                            displayOrder: maxOrder + 1
+                        });
+                        brandsAdded++;
+                    }
+                });
+
+                if (brandsAdded > 0) {
+                    localStorage.setItem('brands', JSON.stringify(existingBrands));
+                }
+
+                // Add new flavors
+                let existingFlavors = JSON.parse(localStorage.getItem('flavors') || '[]');
+                let flavorsAdded = 0;
+
+                newFlavors.forEach(flavorName => {
+                    if (!existingFlavors.some(f => f.name === flavorName)) {
+                        existingFlavors.push({
+                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                            name: flavorName
+                        });
+                        flavorsAdded++;
+                    }
+                });
+
+                if (flavorsAdded > 0) {
+                    localStorage.setItem('flavors', JSON.stringify(existingFlavors));
+                }
+
+                // Create brand-flavor associations
+                let brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
+                let associationsAdded = 0;
+
+                newBrands.forEach(brandName => {
+                    if (!brandFlavors[brandName]) {
+                        brandFlavors[brandName] = [];
+                    }
+
+                    newFlavors.forEach(flavorName => {
+                        if (!brandFlavors[brandName].includes(flavorName)) {
+                            brandFlavors[brandName].push(flavorName);
+                            associationsAdded++;
+                        }
+                    });
+                });
+
+                if (associationsAdded > 0) {
+                    localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+                }
+
+                // Add products (merge mode)
+                let existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+                let productsAdded = 0;
+
+                importedProducts.forEach(imported => {
+                    // Check for duplicates by ID or name+brand combination
+                    const isDuplicate = existingProducts.some(existing =>
+                        existing.id === imported.id ||
+                        (existing.name === imported.name && existing.brand === imported.brand)
+                    );
+
+                    if (!isDuplicate) {
+                        // Convert flavors array to flavor objects for storage
+                        if (imported.flavors && imported.flavors.length > 0) {
+                            imported.flavorsData = imported.flavors.map(flavorName => ({
+                                name: flavorName,
+                                image: '' // Empty image, can be updated later
+                            }));
+                        }
+
+                        existingProducts.push(imported);
+                        productsAdded++;
+                    }
+                });
+
+                localStorage.setItem('products', JSON.stringify(existingProducts));
+
+                // Refresh UI
+                loadBrands();
+                loadFlavors();
+                loadProductsAdmin();
+                updateDashboardStats();
+                populateBrandAndFlavorSelects();
+
+                alert(`Import completed successfully!\n\n` +
+                      `• Products added: ${productsAdded}\n` +
+                      `• Brands created: ${brandsAdded}\n` +
+                      `• Flavors created: ${flavorsAdded}\n` +
+                      `• Brand-flavor associations: ${associationsAdded}`);
+            }
+
+            event.target.value = '';
+        } catch (error) {
+            console.error('Excel import error:', error);
+            alert('Error importing Excel file: ' + error.message);
+            event.target.value = '';
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+// Download Excel template
+function downloadExcelTemplate() {
+    if (typeof XLSX === 'undefined') {
+        alert('Excel library not loaded. Please refresh the page and try again.');
+        return;
+    }
+
+    // Create sample data
+    const sampleData = [
+        {
+            'Name': 'Blue Razz Ice',
+            'Brand': 'Geek Bar',
+            'Flavor': 'Blue Razz Ice',
+            'Price': 15.99,
+            'Stock': 50,
+            'Status': 'available',
+            'Image': '',
+            'Description': 'A refreshing blue raspberry ice flavor',
+            'Specs': '7500 Puffs\n5% Nicotine\nDisposable'
+        },
+        {
+            'Name': 'Mint Blast',
+            'Brand': 'VIHO',
+            'Flavor': 'Mint, Ice, Blast',
+            'Price': 12.99,
+            'Stock': 30,
+            'Status': 'available',
+            'Image': '',
+            'Description': 'Cool mint with ice blast',
+            'Specs': '5000 Puffs\n2% Nicotine\nDisposable'
+        },
+        {
+            'Name': 'Strawberry Watermelon',
+            'Brand': 'Air Bar',
+            'Flavor': 'Strawberry, Watermelon',
+            'Price': 18.99,
+            'Stock': 25,
+            'Status': 'available',
+            'Image': '',
+            'Description': 'Sweet strawberry watermelon mix',
+            'Specs': '8000 Puffs\n5% Nicotine\nDisposable'
+        }
+    ];
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products Template');
+
+    // Generate file and download
+    XLSX.writeFile(workbook, 'product_import_template.xlsx');
+
+    alert('Template downloaded! Fill it out and use "Import Excel with Brands" to upload your products.');
+}
+
+// Show Excel format help
+function showExcelFormatHelp() {
+    const helpText = `
+EXCEL IMPORT FORMAT HELP
+
+Your Excel file should have these columns (case-insensitive):
+• Name/Product Name - Product name (required)
+• Brand/Brand Name - Brand name (required)
+• Flavor/Flavors - One or more flavors separated by comma or semicolon (optional)
+• Price - Product price (optional, defaults to 0)
+• Stock/Quantity - Stock quantity (optional, defaults to 0)
+• Status - Product status (optional, defaults to 'available')
+• Image/Image URL - Product image URL (optional)
+• Description - Product description (optional)
+• Specs/Specifications - Product specifications (one per line, optional)
+
+Example Excel content:
+| Name          | Brand     | Flavor              | Price | Stock | Status     | Image |
+|---------------|-----------|---------------------|-------|-------|------------|-------|
+| Blue Razz Ice | Geek Bar  | Blue Razz Ice       | 15.99 | 50    | available  |       |
+| Mint Blast    | VIHO      | Mint, Ice, Blast    | 12.99 | 30    | available  |       |
+
+What this import does:
+✓ Automatically creates new brands if they don't exist
+✓ Automatically creates new flavors if they don't exist
+✓ Creates brand-flavor associations automatically
+✓ Imports products with proper relationships
+✓ Skips duplicate products (same name + brand combination)
+
+Notes:
+• First row must be headers
+• Name and Brand columns are required for each product
+• Flavors can be multiple (separated by comma or semicolon)
+• Products with missing required fields will be skipped
+• Existing brands/flavors won't be duplicated
+`;
+
+    alert(helpText);
+}
+
 // Make functions available globally
 window.exportProducts = exportProducts;
 window.importProducts = importProducts;
 window.handleFileImport = handleFileImport;
+window.importProductsWithBrands = importProductsWithBrands;
+window.handleFileImportWithBrands = handleFileImportWithBrands;
+window.downloadExcelTemplate = downloadExcelTemplate;
+window.showExcelFormatHelp = showExcelFormatHelp;
 window.editFlavor = editFlavor;
 window.deleteFlavor = deleteFlavor;
 window.addFlavor = addFlavor;

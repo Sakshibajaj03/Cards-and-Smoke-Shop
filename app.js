@@ -66,6 +66,12 @@ function initializeData() {
     if (!localStorage.getItem('featuredProducts')) {
         localStorage.setItem('featuredProducts', JSON.stringify(['', '', '', '']));
     }
+    if (!localStorage.getItem('brandFlavors')) {
+        localStorage.setItem('brandFlavors', JSON.stringify({}));
+    }
+    if (!localStorage.getItem('brandSubBrands')) {
+        localStorage.setItem('brandSubBrands', JSON.stringify({}));
+    }
 }
 
 // Initialize on page load
@@ -79,6 +85,17 @@ function initializeProducts() {
         return; // Products already exist, don't initialize
     }
 
+    // Helper function to get embedded image or fallback to regular path
+    function getProductImage(imagePath) {
+        // First try embedded images
+        if (typeof getEmbeddedImage === 'function') {
+            const embedded = getEmbeddedImage(imagePath);
+            if (embedded) return embedded;
+        }
+        // Fallback to regular image path
+        return 'images/' + imagePath;
+    }
+
     const products = [
         // YOVO Products
         {
@@ -90,16 +107,16 @@ function initializeProducts() {
             status: 'available',
             flavor: 'Blue Razz Ice',
             flavors: [
-                { name: 'Blue Razz Ice', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Fresh Mint', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Infinite Swirl', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Miami Mint', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Orange Ice', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Peach Raspberry', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Sour Apple', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Sour Strawberry', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Triple Berry', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' },
-                { name: 'Watermelon Ice', image: 'images/yovo/yovo_jb50000_pod_5pk.jpg' }
+                { name: 'Blue Razz Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Fresh Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Infinite Swirl', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Miami Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Orange Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Peach Raspberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Sour Apple', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Sour Strawberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Triple Berry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
+                { name: 'Watermelon Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') }
             ],
             image: 'images/yovo/yovo_jb50000_pod_5pk.jpg',
             description: 'YOVO JB50000 Pod 5pk - Premium vaping experience with long-lasting pods. Master Case: 20 x 5pk.',
