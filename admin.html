@@ -39,10 +39,6 @@
                     <i class="fas fa-images"></i>
                     <span>Slider Images</span>
                 </a>
-                <a href="#hero-images" class="nav-item" onclick="event.preventDefault(); showSection('hero-images'); return false;">
-                    <i class="fas fa-image"></i>
-                    <span>Hero & Side Images</span>
-                </a>
                 <a href="#products" class="nav-item" onclick="event.preventDefault(); showSection('products'); return false;">
                     <i class="fas fa-box"></i>
                     <span>Products</span>
@@ -223,89 +219,6 @@
                     </div>
                 </section>
 
-                <!-- Hero & Side Images Section -->
-                <section id="hero-images" class="admin-section">
-                    <div class="section-header">
-                        <h2><i class="fas fa-image"></i> Hero & Side Images Management</h2>
-                        <p>Manage the main hero image and left/right side images on your homepage</p>
-                    </div>
-                    
-                    <!-- Hero Image -->
-                    <div class="admin-card" style="margin-bottom: 30px;">
-                        <h3 style="margin-bottom: 20px; color: var(--admin-accent);">
-                            <i class="fas fa-image"></i> Hero Image (Header Banner)
-                        </h3>
-                        <div class="form-group">
-                            <label>Hero Image:</label>
-                            <input type="file" accept="image/*" class="image-upload" onchange="handleHeroImageUpload(this)" id="heroImageInput">
-                            <div class="image-preview" id="heroImagePreview" style="margin-top: 15px; min-height: 200px; border: 2px dashed var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
-                                <p style="color: var(--text-light);">No image uploaded</p>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label>Hero Title:</label>
-                            <input type="text" id="heroImageTitle" class="form-input" placeholder="Enter hero title" value="">
-                        </div>
-                        <div class="form-group">
-                            <label>Hero Subtitle:</label>
-                            <input type="text" id="heroImageSubtitle" class="form-input" placeholder="Enter hero subtitle" value="">
-                        </div>
-                        <button class="save-btn" onclick="saveHeroImage()" style="margin-top: 20px;">
-                            <i class="fas fa-save"></i> Save Hero Image
-                        </button>
-                    </div>
-
-                    <!-- Left Side Image -->
-                    <div class="admin-card" style="margin-bottom: 30px;">
-                        <h3 style="margin-bottom: 20px; color: var(--admin-accent);">
-                            <i class="fas fa-arrow-left"></i> Left Side Image
-                        </h3>
-                        <div class="form-group">
-                            <label>Left Side Image:</label>
-                            <input type="file" accept="image/*" class="image-upload" onchange="handleLeftSideImageUpload(this)" id="leftSideImageInput">
-                            <div class="image-preview" id="leftSideImagePreview" style="margin-top: 15px; min-height: 200px; border: 2px dashed var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
-                                <p style="color: var(--text-light);">No image uploaded</p>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label>Left Side Title:</label>
-                            <input type="text" id="leftSideImageTitle" class="form-input" placeholder="Enter title" value="">
-                        </div>
-                        <div class="form-group">
-                            <label>Left Side Subtitle:</label>
-                            <input type="text" id="leftSideImageSubtitle" class="form-input" placeholder="Enter subtitle" value="">
-                        </div>
-                        <button class="save-btn" onclick="saveLeftSideImage()" style="margin-top: 20px;">
-                            <i class="fas fa-save"></i> Save Left Side Image
-                        </button>
-                    </div>
-
-                    <!-- Right Side Image -->
-                    <div class="admin-card">
-                        <h3 style="margin-bottom: 20px; color: var(--admin-accent);">
-                            <i class="fas fa-arrow-right"></i> Right Side Image
-                        </h3>
-                        <div class="form-group">
-                            <label>Right Side Image:</label>
-                            <input type="file" accept="image/*" class="image-upload" onchange="handleRightSideImageUpload(this)" id="rightSideImageInput">
-                            <div class="image-preview" id="rightSideImagePreview" style="margin-top: 15px; min-height: 200px; border: 2px dashed var(--border-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--bg-color);">
-                                <p style="color: var(--text-light);">No image uploaded</p>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label>Right Side Title:</label>
-                            <input type="text" id="rightSideImageTitle" class="form-input" placeholder="Enter title" value="">
-                        </div>
-                        <div class="form-group">
-                            <label>Right Side Subtitle:</label>
-                            <input type="text" id="rightSideImageSubtitle" class="form-input" placeholder="Enter subtitle" value="">
-                        </div>
-                        <button class="save-btn" onclick="saveRightSideImage()" style="margin-top: 20px;">
-                            <i class="fas fa-save"></i> Save Right Side Image
-                        </button>
-                    </div>
-                </section>
-
                 <!-- Products Management Section -->
                 <section id="products" class="admin-section">
                     <div class="section-header">
@@ -315,6 +228,12 @@
                     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                         <button class="add-product-btn" onclick="openProductModal()">
                             <i class="fas fa-plus"></i> Add New Product
+                        </button>
+                        <button class="add-product-btn" onclick="removeDuplicateProducts()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <i class="fas fa-copy"></i> Delete Duplicate Products
+                        </button>
+                        <button class="add-product-btn" onclick="removeAllProducts()" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                            <i class="fas fa-trash-alt"></i> Remove All Products
                         </button>
                         <button class="add-product-btn" onclick="triggerExcelImport()" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
                             <i class="fas fa-file-excel"></i> Import from Excel (Products/Brands/Flavors)
@@ -447,9 +366,14 @@
                     </div>
                     <div class="admin-card">
                         <div class="admin-form">
-                            <button class="add-product-btn" style="margin-bottom: 15px;" onclick="openBrandModal()">
-                                <i class="fas fa-plus"></i> Add Brand
-                            </button>
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                                <button class="add-product-btn" onclick="openBrandModal()">
+                                    <i class="fas fa-plus"></i> Add Brand
+                                </button>
+                                <button class="add-product-btn" onclick="removeAllBrands()" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                                    <i class="fas fa-trash-alt"></i> Remove All Brands
+                                </button>
+                            </div>
                             <div class="info-box" style="margin: 20px 0; padding: 15px; background: #f0f9ff; border-left: 4px solid var(--admin-accent); border-radius: 8px;">
                                 <p><strong>Pre-configured Brands:</strong></p>
                                 <p style="font-size: 14px; margin-top: 8px; color: #6b7280;">
@@ -488,9 +412,14 @@
                     </div>
                     <div class="admin-card">
                         <div class="admin-form">
-                            <button class="add-product-btn" style="margin-bottom: 15px;" onclick="openFlavorModal()">
-                                <i class="fas fa-plus"></i> Add Flavor
-                            </button>
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                                <button class="add-product-btn" onclick="openFlavorModal()">
+                                    <i class="fas fa-plus"></i> Add Flavor
+                                </button>
+                                <button class="add-product-btn" onclick="removeAllFlavors()" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                                    <i class="fas fa-trash-alt"></i> Remove All Flavors
+                                </button>
+                            </div>
                             <div class="flavors-list" id="flavorsList"></div>
                         </div>
                     </div>

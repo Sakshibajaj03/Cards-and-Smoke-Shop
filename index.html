@@ -28,7 +28,6 @@
                 <div class="top-info-left">
                     <span><i class="fas fa-phone"></i> +1 (631) 202-7086</span>
                     <span><i class="fas fa-envelope"></i> support@premiumvapeshop.com</span>
-                    <span><i class="fas fa-map-marker-alt"></i> Free Shipping Over $50</span>
                 </div>
                 <div class="top-info-right">
                     <div id="accountLinks">
@@ -67,13 +66,12 @@
                 </div>
                 
                 <div class="header-actions">
-                    <a href="#" class="cart-button coming-soon-cart" onclick="showComingSoon(event)">
+                    <a href="cart.html" class="cart-button">
                         <div class="cart-icon-wrapper">
                             <i class="fas fa-shopping-cart"></i>
-                            <span class="cart-count" id="cartCount" style="display: none;">0</span>
+                            <span class="cart-count" id="cartCount">0</span>
                         </div>
                         <span class="cart-label">Cart</span>
-                        <span class="coming-soon-badge animate-pulse">Coming Soon</span>
                     </a>
                 </div>
             </div>
@@ -138,14 +136,6 @@
         <div class="container">
             <!-- Catalog Hero & Filters -->
             <section class="catalog-hero">
-                <div class="section-header-modern-full catalog-hero-head">
-                    <div class="eyebrow-badge"><i class="fas fa-bolt"></i> Live catalog</div>
-                    <div>
-                        <h2><i class="fas fa-box-open"></i> Curated Wholesale Catalog</h2>
-                        <p>Browse products by brand, flavor, or featured picks in a warehouse-style layout that matches our theme.</p>
-                    </div>
-                </div>
-
                 <div class="catalog-controls">
                     <div class="catalog-search">
                         <i class="fas fa-search"></i>
@@ -215,22 +205,6 @@
             </section>
         </div>
     </main>
-
-    <!-- Newsletter Section -->
-    <section class="newsletter-section-modern">
-        <div class="container">
-            <div class="newsletter-content-modern">
-                <div class="newsletter-text-modern">
-                    <h2><i class="fas fa-envelope"></i> Subscribe to Our Newsletter</h2>
-                    <p>Get the latest updates, offers, and exclusive deals delivered to your inbox</p>
-                </div>
-                <form class="newsletter-form-modern" onsubmit="handleNewsletter(event)">
-                    <input type="email" placeholder="Enter your email address" required>
-                    <button type="submit">Subscribe</button>
-                </form>
-            </div>
-        </div>
-    </section>
 
     <!-- Footer -->
     <footer class="main-footer-modern">
@@ -686,11 +660,6 @@
             document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
         }
 
-        function handleNewsletter(event) {
-            event.preventDefault();
-            alert('Thank you for subscribing! You will receive our latest updates.');
-            event.target.reset();
-        }
 
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -741,12 +710,7 @@
             }, 100);
         });
         
-        // Show coming soon message for cart
-        function showComingSoon(event) {
-            event.preventDefault();
-            alert('Shopping Cart feature is coming soon! Stay tuned for updates.');
-        }
-        window.showComingSoon = showComingSoon;
+        // Cart functionality is now active
     </script>
 </body>
 </html>

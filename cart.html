@@ -40,7 +40,15 @@
     <!-- Cart Section -->
     <main class="cart-main">
         <div class="container">
-            <h1 class="cart-title">Shopping Cart</h1>
+            <div class="cart-page-header">
+                <div>
+                    <h1 class="cart-title-modern">
+                        <i class="fas fa-shopping-cart"></i>
+                        Shopping Cart
+                    </h1>
+                    <p class="cart-subtitle">Review your items and proceed to checkout</p>
+                </div>
+            </div>
             
             <div class="cart-content">
                 <!-- Cart Items -->
@@ -49,8 +57,15 @@
                         <!-- Cart items will be loaded here -->
                     </div>
                     <div class="empty-cart" id="emptyCart" style="display: none;">
-                        <p>Your cart is empty.</p>
-                        <a href="index.html" class="shop-btn">Continue Shopping</a>
+                        <div class="empty-cart-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <h2>Your cart is empty</h2>
+                        <p>Looks like you haven't added any items to your cart yet.</p>
+                        <a href="index.html" class="shop-btn">
+                            <i class="fas fa-arrow-left"></i>
+                            Continue Shopping
+                        </a>
                     </div>
                 </div>
 
@@ -75,7 +90,10 @@
                         <span id="total">--</span>
                     </div>
                     
-                    <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled>Proceed to Checkout</button>
+                    <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled>
+                        <i class="fas fa-lock"></i>
+                        Proceed to Checkout
+                    </button>
                 </div>
             </div>
 

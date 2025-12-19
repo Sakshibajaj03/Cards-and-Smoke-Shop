@@ -220,6 +220,17 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Global helper function to escape HTML (used by multiple functions)
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make escapeHtml globally available
+window.escapeHtml = escapeHtml;
+
 // Update Dashboard Statistics
 function updateDashboardStats() {
     const products = JSON.parse(localStorage.getItem('products') || '[]');
@@ -281,7 +292,6 @@ function loadSliderImages() {
     }
 }
 
-// Hero & Side Images Management
 
 async function handleSliderImageUpload(index, input) {
     const file = input.files[0];
@@ -1624,9 +1634,18 @@ function loadProductsAdmin() {
     if (!productsList) return;
     
     if (products.length === 0) {
-        productsList.innerHTML = '<p>No products yet. Add your first product!</p>';
-    return;
-  }
+        productsList.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 16px; border: 2px dashed #e5e7eb;">
+                <i class="fas fa-box-open" style="font-size: 64px; color: #d1d5db; margin-bottom: 20px;"></i>
+                <h3 style="color: #6b7280; margin-bottom: 10px;">No products yet</h3>
+                <p style="color: #9ca3af; margin-bottom: 20px;">Add your first product to get started!</p>
+                <button class="add-product-btn" onclick="openProductModal()" style="margin: 0 auto;">
+                    <i class="fas fa-plus"></i> Add New Product
+                </button>
+            </div>
+        `;
+        return;
+    }
   
     productsList.innerHTML = products.map(product => {
         let productImg = product.image;
@@ -1636,33 +1655,108 @@ function loadProductsAdmin() {
             }
         }
         const hasImage = productImg && productImg.trim() !== '';
+        
+        // Get product details
+        const brand = product.brand || 'N/A';
+        const flavor = product.flavor || (product.flavors && product.flavors.length > 0 ? product.flavors[0].name : 'N/A');
+        const stock = product.stock || 0;
+        const status = product.status || 'available';
+        const flavorsCount = product.flavors && Array.isArray(product.flavors) ? product.flavors.length : 0;
+        
+        // Status badge
+        let statusBadge = '';
+        if (status === 'available') {
+            statusBadge = '<span class="product-status-badge available"><i class="fas fa-check-circle"></i> Available</span>';
+        } else if (status === 'out-of-stock') {
+            statusBadge = '<span class="product-status-badge out-of-stock"><i class="fas fa-times-circle"></i> Out of Stock</span>';
+        } else {
+            statusBadge = '<span class="product-status-badge coming-soon"><i class="fas fa-clock"></i> Coming Soon</span>';
+        }
+        
         const imageDisplay = hasImage 
-            ? `<img src="${productImg}" alt="${product.name}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-            : `<div style="width: 120px; height: 120px; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #9ca3af; flex-direction: column;">
-                 <i class="fas fa-image" style="font-size: 32px; margin-bottom: 8px;"></i>
-                 <span style="font-size: 12px; text-align: center;">No Image</span>
+            ? `<div class="product-admin-image-wrapper">
+                 <img src="${productImg}" alt="${product.name}" class="product-admin-image" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 <div class="product-image-placeholder-admin" style="display: none;">
+                     <i class="fas fa-image"></i>
+                     <span>No Image</span>
+                 </div>
+               </div>`
+            : `<div class="product-image-placeholder-admin">
+                 <i class="fas fa-image"></i>
+                 <span>No Image</span>
                </div>`;
         
+        const price = product.price || '0';
+        const formattedPrice = parseFloat(price).toFixed(2);
+        
         return `
-        <div class="product-admin-item">
-            <div class="product-admin-info">
+        <div class="product-admin-card">
+            <div class="product-image-section">
                 ${imageDisplay}
-                <div style="flex: 1;">
-                    <h3>${product.name}</h3>
-                    <p>Brand: ${product.brand} | Flavor: ${product.flavor}</p>
-                    <p style="font-size: 18px; font-weight: 700; color: var(--primary-color); margin-top: 8px;">--</p>
-                    ${!hasImage ? '<p style="color: #f59e0b; font-weight: 600; margin-top: 10px; padding: 8px; background: #fef3c7; border-radius: 6px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> Image needed - Click Edit to upload</p>' : '<p style="color: var(--success-color); font-weight: 600; margin-top: 10px; padding: 8px; background: #d1fae5; border-radius: 6px; display: inline-block;"><i class="fas fa-check-circle"></i> Image uploaded</p>'}
-      </div>
-      </div>
-            <div class="product-admin-actions">
-                <button class="edit-btn" onclick="editProduct('${product.id}')">
-                    <i class="fas fa-edit"></i> Edit
+            </div>
+            <div class="product-info-section">
+                <div class="product-main-info">
+                    <div class="product-title-row">
+                        <h3 class="product-admin-title">${escapeHtml(product.name)}</h3>
+                        ${statusBadge}
+                    </div>
+                    <div class="product-meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-icon brand-icon">
+                                <i class="fas fa-tag"></i>
+                            </div>
+                            <div class="meta-content">
+                                <span class="meta-label">Brand</span>
+                                <span class="meta-value">${escapeHtml(brand)}</span>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-icon flavor-icon">
+                                <i class="fas fa-palette"></i>
+                            </div>
+                            <div class="meta-content">
+                                <span class="meta-label">Flavor</span>
+                                <span class="meta-value">
+                                    ${escapeHtml(flavor)}
+                                    ${flavorsCount > 1 ? `<span class="flavor-badge">+${flavorsCount - 1}</span>` : ''}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-icon stock-icon">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div class="meta-content">
+                                <span class="meta-label">Stock</span>
+                                <span class="meta-value ${stock > 0 ? 'stock-good' : 'stock-bad'}">${stock} units</span>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-icon price-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <div class="meta-content">
+                                <span class="meta-label">Price</span>
+                                <span class="meta-value price-highlight">$${formattedPrice}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="product-status-footer">
+                    ${!hasImage ? '<span class="status-badge warning"><i class="fas fa-exclamation-triangle"></i> Image needed</span>' : '<span class="status-badge success"><i class="fas fa-check-circle"></i> Image uploaded</span>'}
+                </div>
+            </div>
+            <div class="product-actions-section">
+                <button class="action-btn edit-action" onclick="editProduct('${product.id}')" title="Edit Product">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit</span>
                 </button>
-                <button class="delete-btn" onclick="deleteProduct('${product.id}')">
-                    <i class="fas fa-trash"></i> Delete
+                <button class="action-btn delete-action" onclick="deleteProduct('${product.id}')" title="Delete Product">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Delete</span>
                 </button>
-      </div>
-      </div>
+            </div>
+        </div>
     `;
     }).join('');
 }
@@ -3009,8 +3103,258 @@ async function saveAllDataToCode() {
     }
 }
 
+// Remove Duplicate Products
+async function removeDuplicateProducts() {
+    try {
+        // Get all products
+        let products = JSON.parse(localStorage.getItem('products') || '[]');
+        
+        if (products.length === 0) {
+            alert('ℹ️ No products found to check for duplicates.');
+            return;
+        }
+        
+        // Helper function to normalize product identifier for comparison
+        function getProductKey(product) {
+            const name = (product.name || '').trim().toLowerCase();
+            const brand = (product.brand || '').trim().toLowerCase();
+            // Use name + brand as the key, or just name if brand is empty
+            return brand ? `${name}::${brand}` : name;
+        }
+        
+        // Find duplicates
+        const seen = new Map();
+        const duplicates = [];
+        const uniqueProducts = [];
+        
+        products.forEach((product, index) => {
+            const key = getProductKey(product);
+            
+            if (seen.has(key)) {
+                // This is a duplicate
+                duplicates.push({
+                    product: product,
+                    index: index,
+                    originalIndex: seen.get(key)
+                });
+            } else {
+                // First occurrence - keep it
+                seen.set(key, index);
+                uniqueProducts.push(product);
+            }
+        });
+        
+        if (duplicates.length === 0) {
+            alert('✅ No duplicate products found! All products are unique.');
+            return;
+        }
+        
+        // Show confirmation with details
+        const duplicateList = duplicates.slice(0, 5).map(dup => 
+            `• ${dup.product.name} (${dup.product.brand || 'No Brand'})`
+        ).join('\n');
+        
+        const moreText = duplicates.length > 5 ? `\n... and ${duplicates.length - 5} more duplicates` : '';
+        
+        const confirmed = confirm(
+            `⚠️ Found ${duplicates.length} duplicate product(s)!\n\n` +
+            `Duplicates to be removed:\n${duplicateList}${moreText}\n\n` +
+            `• ${uniqueProducts.length} unique products will be kept\n` +
+            `• ${duplicates.length} duplicate products will be removed\n\n` +
+            `This action CANNOT be undone!\n\n` +
+            `Do you want to remove the duplicates?`
+        );
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        // Remove duplicates (keep only unique products)
+        localStorage.setItem('products', JSON.stringify(uniqueProducts));
+        
+        // Update featured products - remove any that were duplicates
+        let featuredProducts = JSON.parse(localStorage.getItem('featuredProducts') || '[]');
+        const uniqueProductIds = new Set(uniqueProducts.map(p => p.id));
+        featuredProducts = featuredProducts.filter(id => uniqueProductIds.has(id));
+        localStorage.setItem('featuredProducts', JSON.stringify(featuredProducts));
+        
+        // Update cart - remove any duplicate products
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        cart = cart.filter(item => uniqueProductIds.has(item.productId));
+        localStorage.setItem('cart', JSON.stringify(cart));
+        
+        // Update store-data.json if dataManager is available
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.saveDataToFile) {
+            const currentData = await window.dataManager.loadDataFromFile().catch(() => ({}));
+            const updatedData = {
+                ...currentData,
+                products: uniqueProducts,
+                featuredProducts: featuredProducts
+            };
+            await window.dataManager.saveDataToFile(updatedData);
+        }
+        
+        alert(`✅ Successfully removed ${duplicates.length} duplicate product(s)!\n\n` +
+              `• ${uniqueProducts.length} unique products remaining\n` +
+              `• Featured products updated\n` +
+              `• Cart items updated`);
+        
+        // Reload products list and update stats
+        loadProductsAdmin();
+        loadFeaturedProducts();
+        updateDashboardStats();
+        
+    } catch (error) {
+        console.error('Remove Duplicate Products Error:', error);
+        alert('❌ Error removing duplicate products. Please try again.');
+    }
+}
+
+// Remove All Products
+async function removeAllProducts() {
+    const confirmed = confirm(
+        '⚠️ WARNING: This will PERMANENTLY DELETE ALL PRODUCTS!\n\n' +
+        '• All products will be removed\n' +
+        '• Featured products will be cleared\n' +
+        '• Cart items will be removed\n\n' +
+        'This action CANNOT be undone!\n\n' +
+        'Are you sure you want to continue?'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        // Clear products
+        localStorage.setItem('products', '[]');
+        localStorage.setItem('featuredProducts', '[]');
+        localStorage.setItem('cart', '[]');
+        
+        // Update store-data.json if dataManager is available
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.saveDataToFile) {
+            const currentData = await window.dataManager.loadDataFromFile().catch(() => ({}));
+            const updatedData = {
+                ...currentData,
+                products: [],
+                featuredProducts: []
+            };
+            await window.dataManager.saveDataToFile(updatedData);
+        }
+        
+        alert('✅ All products removed successfully!');
+        
+        // Reload products list and update stats
+        loadProductsAdmin();
+        updateDashboardStats();
+    } catch (error) {
+        console.error('Remove All Products Error:', error);
+        alert('❌ Error removing products. Please try again.');
+    }
+}
+
+// Remove All Brands
+async function removeAllBrands() {
+    const confirmed = confirm(
+        '⚠️ WARNING: This will PERMANENTLY DELETE ALL BRANDS!\n\n' +
+        '• All brands will be removed\n' +
+        '• All sub-brands will be removed\n' +
+        '• Brand-flavor relationships will be cleared\n\n' +
+        'This action CANNOT be undone!\n\n' +
+        'Are you sure you want to continue?'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        // Clear brands
+        localStorage.setItem('brands', '[]');
+        localStorage.setItem('brandSubBrands', '{}');
+        localStorage.setItem('brandFlavors', '{}');
+        
+        // Update store-data.json if dataManager is available
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.saveDataToFile) {
+            const currentData = await window.dataManager.loadDataFromFile().catch(() => ({}));
+            const updatedData = {
+                ...currentData,
+                brands: []
+            };
+            await window.dataManager.saveDataToFile(updatedData);
+        }
+        
+        alert('✅ All brands removed successfully!');
+        
+        // Reload brands list and update stats
+        loadBrands();
+        populateBrandAndFlavorSelects();
+        updateDashboardStats();
+    } catch (error) {
+        console.error('Remove All Brands Error:', error);
+        alert('❌ Error removing brands. Please try again.');
+    }
+}
+
+// Remove All Flavors
+async function removeAllFlavors() {
+    const confirmed = confirm(
+        '⚠️ WARNING: This will PERMANENTLY DELETE ALL FLAVORS!\n\n' +
+        '• All flavors will be removed\n' +
+        '• Brand-flavor relationships will be cleared\n' +
+        '• Product flavor associations will be cleared\n\n' +
+        'This action CANNOT be undone!\n\n' +
+        'Are you sure you want to continue?'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        // Clear flavors
+        localStorage.setItem('flavors', '[]');
+        localStorage.setItem('brandFlavors', '{}');
+        
+        // Clear flavors from products
+        const products = JSON.parse(localStorage.getItem('products') || '[]');
+        products.forEach(product => {
+            if (product.flavors) {
+                product.flavors = [];
+            }
+        });
+        localStorage.setItem('products', JSON.stringify(products));
+        
+        // Update store-data.json if dataManager is available
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.saveDataToFile) {
+            const currentData = await window.dataManager.loadDataFromFile().catch(() => ({}));
+            const updatedData = {
+                ...currentData,
+                flavors: [],
+                products: products
+            };
+            await window.dataManager.saveDataToFile(updatedData);
+        }
+        
+        alert('✅ All flavors removed successfully!');
+        
+        // Reload flavors list and update stats
+        loadFlavors();
+        populateBrandAndFlavorSelects();
+        loadProductsAdmin();
+        updateDashboardStats();
+    } catch (error) {
+        console.error('Remove All Flavors Error:', error);
+        alert('❌ Error removing flavors. Please try again.');
+    }
+}
+
 window.manualSaveDataFile = manualSaveDataFile;
 window.importData = importData;
 window.createBackup = createBackup;
 window.removeAllProductImages = removeAllProductImages;
 window.saveAllDataToCode = saveAllDataToCode;
+window.removeDuplicateProducts = removeDuplicateProducts;
+window.removeAllProducts = removeAllProducts;
+window.removeAllBrands = removeAllBrands;
+window.removeAllFlavors = removeAllFlavors;

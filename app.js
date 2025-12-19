@@ -39,8 +39,8 @@ function registerUser(username, email, password) {
 
 function loginUser(username, password) {
     // Admin check
-    if (username === 'admin' && password === 'admin123') {
-        const adminUser = { username: 'admin', role: 'admin' };
+    if (username === 'cards' && password === 'cards@123') {
+        const adminUser = { username: 'cards', role: 'admin' };
         localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(adminUser));
         return { success: true, user: adminUser };
     }
@@ -660,8 +660,11 @@ function createProductCard(product) {
                         <div class="product-card-login"><i class="fas fa-lock"></i> Login to view prices</div>
                     `}
                     <div class="product-card-actions">
-                        <button class="card-btn primary" onclick="event.stopPropagation(); quickOrder('${productId}')">
-                            <i class="fas fa-cart-plus"></i> Quick order
+                        <button class="card-btn primary" onclick="event.stopPropagation(); addToCart('${productId}')">
+                            <i class="fas fa-cart-plus"></i> Add to Cart
+                        </button>
+                        <button class="card-btn ghost" onclick="event.stopPropagation(); quickOrder('${productId}')" style="margin-left: 8px;">
+                            <i class="fas fa-eye"></i> View
                         </button>
                     </div>
                 </div>
@@ -1476,13 +1479,24 @@ function updateCartCount() {
         const count = cart.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
         const cartCountElements = document.querySelectorAll('.cart-count');
         cartCountElements.forEach(el => {
-            if (el) el.textContent = count;
+            if (el) {
+                el.textContent = count;
+                // Show cart count badge if there are items, hide if empty
+                if (count > 0) {
+                    el.style.display = 'flex';
+                } else {
+                    el.style.display = 'none';
+                }
+            }
         });
     } catch (error) {
         console.error('Error updating cart count:', error);
         const cartCountElements = document.querySelectorAll('.cart-count');
         cartCountElements.forEach(el => {
-            if (el) el.textContent = '0';
+            if (el) {
+                el.textContent = '0';
+                el.style.display = 'none';
+            }
         });
     }
 }
@@ -1526,32 +1540,67 @@ function loadCart() {
             
             const selectedFlavor = item.selectedFlavor || item.flavor || '';
             const lineTotal = (parseFloat(item.price || 0) * itemQuantity).toFixed(2);
+            const unitPrice = parseFloat(item.price || 0).toFixed(2);
+            
             return `
-                <div class="cart-item">
-                    ${itemImage ? `<img src="${itemImage}" alt="${itemName}" class="cart-item-image" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="product-image-placeholder-full" style="display: none; width: 100%; max-width: 200px; margin: 0 auto 15px;">
-                        <i class="fas fa-image"></i>
-                        <span>Image Not Found</span>
-                    </div>` : `<div class="product-image-placeholder-full" style="width: 100%; max-width: 200px; margin: 0 auto 15px;">
-                        <i class="fas fa-image"></i>
-                        <span>No Image</span>
-                    </div>`}
-                    <div class="cart-item-info">
-                        <h3 class="cart-item-name">${itemName}</h3>
-                        <p class="cart-item-meta">Brand: ${itemBrand || 'N/A'}${selectedFlavor ? ` | Flavor: ${escapeHtml(selectedFlavor)}` : ''}</p>
-                        ${isLoggedIn ? `<p class="cart-item-price">$${lineTotal}</p>` : `
-                            <div style="display:flex; align-items:center; gap:8px; justify-self:end;">
-                                <span style="width:12px; height:12px; border-left:3px solid #ef4444;"></span>
-                                <span style="color:#ef4444; font-weight:700; font-size:12px; text-transform:uppercase;">Login to view prices</span>
+                <div class="cart-item-modern">
+                    <div class="cart-item-image-wrapper">
+                        ${itemImage ? `
+                            <img src="${itemImage}" alt="${itemName}" class="cart-item-image-modern" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="cart-image-placeholder" style="display: none;">
+                                <i class="fas fa-image"></i>
+                                <span>No Image</span>
+                            </div>
+                        ` : `
+                            <div class="cart-image-placeholder">
+                                <i class="fas fa-image"></i>
+                                <span>No Image</span>
                             </div>
                         `}
-                        <div class="cart-item-actions">
-                            <div class="quantity-selector">
-                                <button onclick="updateCartQuantity('${itemId}', -1)" aria-label="Decrease quantity">-</button>
-                                <input type="number" value="${itemQuantity}" min="1" id="qty-${itemId}" onchange="updateCartQuantityFromInput('${itemId}')">
-                                <button onclick="updateCartQuantity('${itemId}', 1)" aria-label="Increase quantity">+</button>
+                    </div>
+                    <div class="cart-item-content">
+                        <div class="cart-item-header">
+                            <div class="cart-item-title-section">
+                                <h3 class="cart-item-name-modern">${itemName}</h3>
+                                <div class="cart-item-badges">
+                                    ${itemBrand ? `<span class="cart-brand-badge">${itemBrand}</span>` : ''}
+                                    ${selectedFlavor ? `<span class="cart-flavor-badge">${escapeHtml(selectedFlavor)}</span>` : ''}
+                                </div>
                             </div>
-                            <button class="remove-item-btn" onclick="removeFromCart('${itemId}')">Remove</button>
+                            <button class="cart-remove-btn" onclick="removeFromCart('${itemId}')" aria-label="Remove item" title="Remove from cart">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="cart-item-details">
+                            <div class="cart-item-pricing">
+                                ${isLoggedIn ? `
+                                    <div class="cart-price-info">
+                                        <span class="cart-unit-price">$${unitPrice} <span class="price-label">each</span></span>
+                                        <span class="cart-line-total">$${lineTotal}</span>
+                                    </div>
+                                ` : `
+                                    <div class="cart-login-prompt">
+                                        <i class="fas fa-lock"></i>
+                                        <span>Login to view prices</span>
+                                    </div>
+                                `}
+                            </div>
+                            
+                            <div class="cart-item-controls">
+                                <div class="cart-quantity-control">
+                                    <label class="quantity-label">Quantity:</label>
+                                    <div class="quantity-selector-modern">
+                                        <button class="qty-btn qty-decrease" onclick="updateCartQuantity('${itemId}', -1)" aria-label="Decrease quantity">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input type="number" value="${itemQuantity}" min="1" id="qty-${itemId}" class="qty-input-modern" onchange="updateCartQuantityFromInput('${itemId}')" aria-label="Quantity">
+                                        <button class="qty-btn qty-increase" onclick="updateCartQuantity('${itemId}', 1)" aria-label="Increase quantity">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
