@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+# Note: package-lock.json is included for dependency reproducibility
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Keep all project files including:
+# - All HTML, CSS, JS files
+# - All images folder
+# - All data files
+# - package.json (for dependency reference)
+

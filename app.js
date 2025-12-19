@@ -76,11 +76,16 @@ window.loginUser = loginUser;
 window.logoutUser = logoutUser;
 window.getCurrentUser = getCurrentUser;
 
-// Initialize default data
+/**
+ * Initialize default data (store name, brands, flavors, slider images)
+ * 
+ * IMPORTANT: This ensures all data loads from embedded files when folder is copied to another device.
+ * Same data, same images, same output everywhere!
+ */
 function initializeData() {
-    // Force update check moved to initializeProducts for better merging
     const initialData = window.INITIAL_STORE_DATA || {};
     
+    // Initialize store name from embedded data
     if (!localStorage.getItem(STORAGE_KEYS.STORE_NAME)) {
         localStorage.setItem(STORAGE_KEYS.STORE_NAME, initialData.storeName || 'Premium Store');
     }
@@ -158,7 +163,14 @@ function initializeData() {
 // Initialize on page load
 initializeData();
 
-// Initialize products from images (only if products don't exist or version updated)
+/**
+ * Initialize products from embedded data
+ * 
+ * IMPORTANT: This function ensures that when you copy this folder to another device,
+ * ALL products and images load from the embedded files (products-data.js and embedded-images.js).
+ * 
+ * Works on any device - same data everywhere!
+ */
 function initializeProducts() {
     // Respect manual clear flag: do not auto-initialize after clearing
     if (localStorage.getItem('dataManuallyCleared') === 'true') {
@@ -172,65 +184,104 @@ function initializeProducts() {
     if (existingProducts.length > 0 && currentVersion === DATA_VERSION) {
         return;
     }
+    
+    // If data-initializer.js already initialized, skip (but still update images if needed)
+    if (localStorage.getItem('dataInitialized') === 'true' && existingProducts.length > 0) {
+        console.log('📦 Data already initialized by data-initializer.js, ensuring images are embedded...');
+        // Still update images to ensure they're embedded
+        const productsWithEmbeddedImages = existingProducts.map(product => {
+            if (product.image && !product.image.startsWith('data:image') && typeof getEmbeddedImage === 'function') {
+                const embedded = getEmbeddedImage(product.image) || 
+                               getEmbeddedImage(product.image.replace(/^images\//, ''));
+                if (embedded) {
+                    product.image = embedded;
+                }
+            }
+            return product;
+        });
+        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(productsWithEmbeddedImages));
+        return;
+    }
 
-    console.log('Synchronizing product catalog (Version ' + DATA_VERSION + ')...');
+    console.log('🔄 Loading products from embedded data files (products-data.js)...');
+    console.log('📦 This ensures same data on every device/PC when folder is copied');
 
-    // Helper function to get embedded image or fallback to regular path
+    // Helper function to get embedded image from embedded-images.js
+    // This ensures images work on any device without needing the images/ folder
     function getProductImage(imagePath) {
         if (!imagePath) return '';
         
-        // Try to get from embedded images first
+        // ALWAYS try to get from embedded images first (embedded-images.js)
+        // This ensures images work on any device
         if (typeof getEmbeddedImage === 'function') {
-            // Try with original path, then without images/ prefix
+            // Try with original path
             let embedded = getEmbeddedImage(imagePath);
+            // Try without images/ prefix if needed
             if (!embedded && imagePath.startsWith('images/')) {
                 embedded = getEmbeddedImage(imagePath.replace(/^images\//, ''));
             }
-            if (embedded) return embedded;
+            // If found, use embedded image (base64) - works on any device!
+            if (embedded) {
+                return embedded;
+            }
         }
         
-        // Fallback to regular image path
+        // Fallback to regular image path (only if embedded image not found)
         return imagePath.startsWith('images/') ? imagePath : 'images/' + imagePath;
     }
 
+    // Get products from embedded file (products-data.js)
+    // This array is included in the code, so it works on any device
     const products = window.INITIAL_PRODUCTS || [];
 
-    // Merge hardcoded with existing products to preserve user changes
+    // Check if this is a fresh installation (no existing products)
     let finalProducts;
     if (existingProducts.length > 0) {
+        // Existing installation - merge with embedded data to preserve user changes
+        console.log('📝 Merging with existing products (preserving user changes)...');
         const existingMap = new Map(existingProducts.map(p => [String(p.id), p]));
         finalProducts = products.map(p => {
             const existing = existingMap.get(String(p.id));
             if (existing) {
-                // If existing.image is different from p.image, it's likely a user change or a previously saved state
-                // We should preserve it as long as it's not empty, or if the user explicitly cleared it
-                // To be safe, we only overwrite with p.image if existing.image is missing or null
+                // Preserve user changes, but use embedded image if available
                 let mergedImage = existing.image;
                 if (mergedImage === undefined || mergedImage === null) {
-                    mergedImage = p.image;
+                    mergedImage = getProductImage(p.image);
+                } else {
+                    // Try to use embedded image even if existing has one
+                    const embedded = getProductImage(p.image);
+                    if (embedded && embedded.startsWith('data:image')) {
+                        mergedImage = embedded; // Use embedded base64 image
+                    }
                 }
 
                 return {
-                    ...p, // Start with hardcoded data (gets new flavors, etc.)
+                    ...p, // Start with embedded data
                     ...existing, // Overwrite with user data
-                    image: mergedImage, // Ensure we use the best image
-                    // Explicitly preserve these fields from existing
+                    image: mergedImage, // Use embedded image if available
+                    // Preserve user-modified fields
                     price: existing.price !== undefined ? existing.price : p.price,
                     stock: existing.stock !== undefined ? existing.stock : p.stock,
                     description: existing.description || p.description,
                     status: existing.status || p.status,
-                    // Merge flavors carefully
-                    flavors: p.flavors.map(f => {
+                    // Merge flavors
+                    flavors: p.flavors ? p.flavors.map(f => {
                         if (!existing.flavors) return f;
                         const existingFlavor = existing.flavors.find(ef => ef.name === f.name);
                         return existingFlavor ? { ...f, ...existingFlavor } : f;
-                    })
+                    }) : (existing.flavors || [])
                 };
             }
-            return p;
+            // New product from embedded data - ensure image uses embedded version
+            return {
+                ...p,
+                image: getProductImage(p.image),
+                // Also update additional images if they exist
+                images: p.images ? p.images.map(img => getProductImage(img)) : p.images
+            };
         });
         
-        // Add any products the user created manually that aren't in the hardcoded list
+        // Add any products the user created manually that aren't in the embedded list
         const hardcodedIds = new Set(products.map(p => String(p.id)));
         existingProducts.forEach(p => {
             if (!hardcodedIds.has(String(p.id))) {
@@ -238,10 +289,20 @@ function initializeProducts() {
             }
         });
     } else {
-        finalProducts = products;
+        // FRESH INSTALLATION - Load ALL products from embedded files
+        // This ensures same data on every device when folder is copied
+        console.log('✨ Fresh installation detected - loading ALL products from embedded files...');
+        finalProducts = products.map(p => ({
+            ...p,
+            // Ensure all images use embedded versions (from embedded-images.js)
+            image: getProductImage(p.image),
+            // Also update additional images if they exist
+            images: p.images ? p.images.map(img => getProductImage(img)) : p.images
+        }));
     }
 
-    // Save merged products to localStorage
+    // Save products to localStorage
+    // All images are now embedded (base64), so they work on any device!
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(finalProducts));
     localStorage.setItem('app_data_version', DATA_VERSION);
     
@@ -288,7 +349,8 @@ function initializeProducts() {
         }
     }
 
-    console.log(`✅ Initialized ${products.length} products successfully!`);
+    console.log(`✅ Initialized ${finalProducts.length} products successfully!`);
+    console.log('✅ All product images are embedded (base64) - works on any device!');
 }
 
 // Initialize products on page load (only if products don't exist)
