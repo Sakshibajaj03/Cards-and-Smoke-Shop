@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Login - Premium Store</title>
+    <title>Register - Premium Store</title>
     <link rel="stylesheet" href="styles.css?v=1.0.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="cache-buster.js?v=1.0.0"></script>
@@ -127,10 +124,6 @@
             box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
         }
         
-        .login-btn:active {
-            transform: translateY(0);
-        }
-        
         .login-footer {
             text-align: center;
             margin-top: 32px;
@@ -168,32 +161,41 @@
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <i class="fas fa-store"></i>
-                <h1>Welcome Back</h1>
-                <p>Sign in to access your admin panel</p>
+                <i class="fas fa-user-plus"></i>
+                <h1>Create Account</h1>
+                <p>Join us for exclusive offers</p>
             </div>
             
             <div class="error-message" id="errorMessage"></div>
             
-            <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+            <form class="login-form" id="registerForm" onsubmit="handleRegister(event)">
                 <div class="form-input-group">
                     <i class="fas fa-user"></i>
                     <input type="text" id="username" placeholder="Username" required autocomplete="username">
                 </div>
                 
                 <div class="form-input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" placeholder="Email Address" required autocomplete="email">
+                </div>
+                
+                <div class="form-input-group">
                     <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+                    <input type="password" id="password" placeholder="Password" required autocomplete="new-password">
+                </div>
+
+                <div class="form-input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="confirmPassword" placeholder="Confirm Password" required autocomplete="new-password">
                 </div>
                 
                 <button type="submit" class="login-btn">
-                    <i class="fas fa-sign-in-alt"></i> Sign In
+                    <i class="fas fa-user-plus"></i> Register
                 </button>
             </form>
             
             <div class="login-footer">
-                <p>Default Admin: <strong>admin</strong> / <strong>admin123</strong></p>
-                <p style="margin-top: 8px;">Don't have an account? <a href="register.html">Register</a></p>
+                <p>Already have an account? <a href="login.html">Sign In</a></p>
                 <p style="margin-top: 16px;">
                     <a href="index.html">← Back to Store</a>
                 </p>
@@ -203,63 +205,47 @@
     
     <script src="app.js?v=1.0.0"></script>
     <script>
-        function handleLogin(event) {
+        function handleRegister(event) {
             event.preventDefault();
             
             const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             const errorMessage = document.getElementById('errorMessage');
             
             // Clear previous error
             errorMessage.classList.remove('show');
             errorMessage.textContent = '';
             
-            // Use app.js auth
-            if (typeof loginUser === 'function') {
-                const result = loginUser(username, password);
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match.';
+                errorMessage.classList.add('show');
+                return;
+            }
+
+            if (password.length < 6) {
+                errorMessage.textContent = 'Password must be at least 6 characters long.';
+                errorMessage.classList.add('show');
+                return;
+            }
+            
+            // Call app.js function (which we will add next)
+            if (typeof registerUser === 'function') {
+                const result = registerUser(username, email, password);
                 if (result.success) {
-                    const user = result.user;
-                    if (user && user.role === 'admin') {
-                        sessionStorage.setItem('isAdminLoggedIn', 'true');
-                        window.location.href = 'admin.html';
-                    } else {
-                        window.location.href = 'index.html';
-                    }
+                    alert('Registration successful! Please login.');
+                    window.location.href = 'login.html';
                 } else {
-                    errorMessage.textContent = result.message || 'Invalid username or password. Please try again.';
+                    errorMessage.textContent = result.message || 'Registration failed.';
                     errorMessage.classList.add('show');
-                    const loginBox = document.querySelector('.login-box');
-                    loginBox.style.animation = 'shake 0.5s';
-                    setTimeout(() => { loginBox.style.animation = ''; }, 500);
                 }
             } else {
+                console.error('registerUser function not found');
                 errorMessage.textContent = 'System error. Please try again later.';
                 errorMessage.classList.add('show');
             }
         }
-        
-        // Redirect if already logged in
-        if (typeof getCurrentUser === 'function') {
-            const current = getCurrentUser();
-            if (current && current.role === 'admin') {
-                sessionStorage.setItem('isAdminLoggedIn', 'true');
-                window.location.href = 'admin.html';
-            } else if (current) {
-                window.location.href = 'index.html';
-            }
-        }
-        
-        // Add shake animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                25% { transform: translateX(-10px); }
-                75% { transform: translateX(10px); }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
-

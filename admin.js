@@ -1,51 +1,16 @@
 // Admin Panel Functions
 
-// Helper function to resolve image paths (handles embedded images for portability)
-function getImageSource(imagePath) {
-    if (!imagePath || imagePath.trim() === '') {
-        return null;
-    }
-    
-    // If it's already a data URL, use it
-    if (imagePath.startsWith('data:image')) {
-        return imagePath;
-    }
-
-    // Try to get from embedded images first (for portability)
-    if (typeof getEmbeddedImage === 'function') {
-        // Try with original path, then without images/ prefix
-        let embedded = getEmbeddedImage(imagePath);
-        if (!embedded && imagePath.startsWith('images/')) {
-            embedded = getEmbeddedImage(imagePath.replace(/^images\//, ''));
-        }
-        if (embedded) return embedded;
-    }
-    
-    // If it's already a full URL, use it
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        return imagePath;
-    }
-    
-    // If it's a relative path starting with images/, encode spaces and special characters
-    if (imagePath.startsWith('images/')) {
-        const parts = imagePath.split('/');
-        const encodedParts = parts.map((part, index) => {
-            if (index === 0) return part;
-            return encodeURIComponent(part);
-        });
-        return encodedParts.join('/');
-    }
-    
-    // If it's just a filename, assume it's in images folder
-    if (!imagePath.includes('/')) {
-        return `images/${encodeURIComponent(imagePath)}`;
-    }
-    
-    return imagePath;
-}
-
 // Initialize admin page
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Load data from JSON file first (for portability)
+    try {
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.initializeDataFromFile) {
+            await window.dataManager.initializeDataFromFile();
+        }
+    } catch (error) {
+        console.log('Could not load from file, using default initialization');
+    }
+    
     // Initialize all data structures for portability
     initializeAllData();
 
@@ -280,31 +245,65 @@ function loadSliderImages() {
 
 // Hero & Side Images Management
 
-function handleSliderImageUpload(index, input) {
+async function handleSliderImageUpload(index, input) {
     const file = input.files[0];
     if (!file) return;
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const imageUrl = e.target.result;
-        let sliderImages = JSON.parse(localStorage.getItem('sliderImages') || '[]');
-        sliderImages[index - 1] = imageUrl;
-        localStorage.setItem('sliderImages', JSON.stringify(sliderImages));
-        
-        // Update the data file in memory if it's loaded
-        if (typeof window.SLIDER_IMAGES_DATA !== 'undefined') {
-            window.SLIDER_IMAGES_DATA[index - 1] = imageUrl;
+    // Try to use data manager to save image to folder
+    let imageUrl = '';
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.uploadSliderImage) {
+        try {
+            imageUrl = await window.dataManager.uploadSliderImage(file, index);
+            // If it returned a path (not data URL), convert file to data URL for display
+            if (!imageUrl.startsWith('data:')) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    imageUrl = e.target.result;
+                    saveSliderImageToStorage(index, imageUrl);
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+        } catch (error) {
+            console.error('Error uploading slider image:', error);
         }
-        
-        const preview = document.getElementById(`preview${index}`);
-        if (preview) {
-            preview.innerHTML = `<img src="${imageUrl}" alt="Slider ${index}">`;
-        }
-        
-        updateDashboardStats();
-        alert('Slider image uploaded successfully!\n\nNote: To make images persist on another PC, click "Update Slider Data File" button below.');
-    };
-    reader.readAsDataURL(file);
+    }
+    
+    // Fallback to base64 conversion
+    if (!imageUrl) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            imageUrl = e.target.result;
+            saveSliderImageToStorage(index, imageUrl);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        saveSliderImageToStorage(index, imageUrl);
+    }
+}
+
+function saveSliderImageToStorage(index, imageUrl) {
+    let sliderImages = JSON.parse(localStorage.getItem('sliderImages') || '[]');
+    sliderImages[index - 1] = imageUrl;
+    localStorage.setItem('sliderImages', JSON.stringify(sliderImages));
+    
+    // Auto-save to JSON file
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
+    
+    const preview = document.getElementById(`preview${index}`);
+    if (preview) {
+        preview.innerHTML = `<img src="${imageUrl}" alt="Slider ${index}">`;
+    }
+    
+    updateDashboardStats();
+    alert('Slider image uploaded successfully!');
 }
 
 // Generate and download slider-data.js file
@@ -1183,7 +1182,7 @@ function loadFeaturedProducts() {
             <div class="featured-slot-content">
                 ${featuredProduct ? `
                     <div class="featured-product-preview">
-                        <img src="${getImageSource(featuredProduct.image) || ''}" alt="${featuredProduct.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <img src="${featuredProduct.image || ''}" alt="${featuredProduct.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="featured-placeholder" style="display: none;">
                             <i class="fas fa-image"></i>
                             <span>No Image</span>
@@ -1229,7 +1228,7 @@ function previewFeaturedProduct(slotIndex, productId) {
     const content = slot.querySelector('.featured-slot-content');
     content.innerHTML = `
         <div class="featured-product-preview">
-            <img src="${getImageSource(product.image) || ''}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <img src="${product.image || ''}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="featured-placeholder" style="display: none;">
                 <i class="fas fa-image"></i>
                 <span>No Image</span>
@@ -1505,7 +1504,7 @@ function loadProductsAdmin() {
         }
         const hasImage = productImg && productImg.trim() !== '';
         const imageDisplay = hasImage 
-            ? `<img src="${getImageSource(productImg)}" alt="${product.name}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+            ? `<img src="${productImg}" alt="${product.name}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
             : `<div style="width: 120px; height: 120px; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #9ca3af; flex-direction: column;">
                  <i class="fas fa-image" style="font-size: 32px; margin-bottom: 8px;"></i>
                  <span style="font-size: 12px; text-align: center;">No Image</span>
@@ -1727,7 +1726,28 @@ function saveProduct() {
         let additionalImages = [];
         
         if (imageInput.files[0]) {
-            productImage = await processImage(imageInput.files[0]);
+            // Try to use data manager to save image to folder
+            if (typeof window.dataManager !== 'undefined' && window.dataManager.uploadProductImage) {
+                try {
+                    const productIdForImage = productId || Date.now().toString();
+                    const savedPath = await window.dataManager.uploadProductImage(imageInput.files[0], productIdForImage);
+                    // If it returned a path, convert to data URL for display, otherwise use the data URL
+                    if (!savedPath.startsWith('data:')) {
+                        productImage = await processImage(imageInput.files[0]);
+                        // Store both path and data URL - path for portability, data URL for display
+                        productImage = savedPath; // Use path for storage
+                    } else {
+                        productImage = savedPath;
+                    }
+                } catch (error) {
+                    console.error('Error uploading image with data manager:', error);
+                    // Fallback to base64
+                    productImage = await processImage(imageInput.files[0]);
+                }
+            } else {
+                // Fallback to base64
+                productImage = await processImage(imageInput.files[0]);
+            }
         } else if (productId && !shouldRemoveImage) {
             const existingProduct = products.find(p => p.id === productId);
             if (existingProduct) {
@@ -1759,7 +1779,24 @@ function saveProduct() {
             let flavorImage = '';
             
             if (imageInputEl.files && imageInputEl.files[0]) {
-                flavorImage = await processImage(imageInputEl.files[0]);
+                // Try to use data manager to save flavor image
+                if (typeof window.dataManager !== 'undefined' && window.dataManager.uploadProductImage) {
+                    try {
+                        const productIdForImage = productId || Date.now().toString();
+                        const savedPath = await window.dataManager.uploadProductImage(imageInputEl.files[0], productIdForImage, flavorName);
+                        if (!savedPath.startsWith('data:')) {
+                            flavorImage = await processImage(imageInputEl.files[0]);
+                            flavorImage = savedPath; // Use path for storage
+                        } else {
+                            flavorImage = savedPath;
+                        }
+                    } catch (error) {
+                        console.error('Error uploading flavor image:', error);
+                        flavorImage = await processImage(imageInputEl.files[0]);
+                    }
+                } else {
+                    flavorImage = await processImage(imageInputEl.files[0]);
+                }
             } else if (previewEl) {
                 flavorImage = previewEl.src;
             }
@@ -1811,6 +1848,17 @@ function saveProduct() {
         // Even if product.brand exists, do NOT add it to brands list automatically
         
         localStorage.setItem('products', JSON.stringify(products));
+        
+        // Auto-save to JSON file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
+        
+        // Auto-save to code files (permanent storage)
+        if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+            window.permanentStorage.autoSavePermanently();
+        }
+        
         loadProductsAdmin();
         loadFeaturedProducts(); // Reload featured products in case product was updated
         hideProductForm();
@@ -1869,7 +1917,7 @@ function editProduct(productId) {
                         <i class="fas fa-check-circle"></i> Current product image
                     </p>
                     <div style="position: relative;">
-                        <img src="${getImageSource(product.image)}" alt="Product preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; border: 2px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <img src="${product.image}" alt="Product preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; border: 2px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                         <button type="button" onclick="removeProductImage()" style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2);" title="Remove Image">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -1897,7 +1945,7 @@ function editProduct(productId) {
     const additionalPreview = document.getElementById('additionalImagesPreview');
     if (additionalPreview && product.additionalImages) {
         additionalPreview.innerHTML = product.additionalImages.map(img => 
-            `<img src="${getImageSource(img)}" alt="Additional image">`
+            `<img src="${img}" alt="Additional image">`
         ).join('');
     }
     
@@ -1982,7 +2030,7 @@ window.removeProductImage = removeProductImage;
 // Excel Import/Export Functions - New Implementation
 
 // Comprehensive data clearance
-function clearAllData() {
+async function clearAllData() {
     // Create a custom confirmation dialog
     const confirmed = confirm(
         '⚠️ CRITICAL WARNING: This will PERMANENTLY DELETE ALL:\n\n' +
@@ -1991,6 +2039,7 @@ function clearAllData() {
         '• All Flavors & Brand-Flavor mappings\n' +
         '• Featured Products & Slider Images\n' +
         '• Cart Data & Store Settings\n' +
+        '• All data in store-data.json\n' +
         '• User Accounts (except default admin)\n\n' +
         'This action CANNOT be undone!\n\n' +
         'Are you absolutely sure you want to continue?'
@@ -2003,7 +2052,7 @@ function clearAllData() {
     // Second confirmation
     const doubleConfirmed = confirm(
         '⚠️ FINAL WARNING!\n\n' +
-        'You are about to delete EVERYTHING from the local database.\n\n' +
+        'You are about to delete EVERYTHING from the database and reset store-data.json.\n\n' +
         'Click OK to proceed or Cancel to abort.'
     );
     
@@ -2045,11 +2094,28 @@ function clearAllData() {
         
         // Set manual clear flag to prevent auto-initialization from app.js
         localStorage.setItem('dataManuallyCleared', 'true');
+        localStorage.setItem('dataVersion', '1.0.0');
         
-        alert('✅ All data cleared successfully!\n\nThe database has been completely wiped clean.');
+        // Reset store-data.json file to empty state
+        const emptyData = {
+            version: '1.0.0',
+            storeName: 'Premium Vape Shop',
+            products: [],
+            brands: [],
+            flavors: [],
+            sliderImages: [],
+            featuredProducts: []
+        };
         
-        // Redirect to index or reload
-        window.location.href = 'index.html';
+        // Save empty data to file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.saveDataToFile) {
+            await window.dataManager.saveDataToFile(emptyData);
+        }
+        
+        alert('✅ All data cleared successfully!\n\nThe database has been completely wiped clean.\n\nYou can now start adding products, brands, and images from scratch.');
+        
+        // Reload admin page to refresh all sections
+        location.reload();
     } catch (error) {
         console.error('Clear All Data Error:', error);
         alert('❌ Error clearing data. Please try again.');
@@ -2497,13 +2563,22 @@ function initializeProductsFromCode() {
         return; // Products already exist, don't initialize
     }
 
+    // Check if INITIAL_PRODUCTS exists (from old data files)
+    const products = (typeof window !== 'undefined' && window.INITIAL_PRODUCTS) ? window.INITIAL_PRODUCTS : [];
+    
+    // If no initial products available, skip initialization
+    if (!products || products.length === 0) {
+        console.log('No initial products data available, skipping initialization');
+        return;
+    }
+
     console.log('Initializing products with embedded images...');
 
     // Helper function to get embedded image
     function getProductImage(imagePath) {
         if (!imagePath) return '';
         
-        // Try to get from embedded images first
+        // Try to get from embedded images first (if function exists)
         if (typeof getEmbeddedImage === 'function') {
             // Try with original path, then without images/ prefix
             let embedded = getEmbeddedImage(imagePath);
@@ -2516,8 +2591,6 @@ function initializeProductsFromCode() {
         // Fallback to regular image path
         return imagePath.startsWith('images/') ? imagePath : 'images/' + imagePath;
     }
-
-    const products = window.INITIAL_PRODUCTS || [];
 
     // Save products to localStorage
     localStorage.setItem('products', JSON.stringify(products));
@@ -2588,6 +2661,69 @@ function initializeProductsFromCode() {
 
 
 
+// Manual save data to file (for portability)
+function manualSaveDataFile() {
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.manualSaveData) {
+        window.dataManager.manualSaveData();
+    } else {
+        alert('Data manager not loaded. Please refresh the page.');
+    }
+}
+
+// Import data from JSON file
+function importData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Validate data structure
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid data format');
+            }
+            
+            // Sync to localStorage
+            if (typeof window.dataManager !== 'undefined' && window.dataManager.syncDataToLocalStorage) {
+                window.dataManager.syncDataToLocalStorage(data);
+            } else {
+                // Fallback: manual sync
+                if (data.storeName) localStorage.setItem('storeName', data.storeName);
+                if (data.products) localStorage.setItem('products', JSON.stringify(data.products));
+                if (data.brands) localStorage.setItem('brands', JSON.stringify(data.brands));
+                if (data.flavors) localStorage.setItem('flavors', JSON.stringify(data.flavors));
+                if (data.sliderImages) localStorage.setItem('sliderImages', JSON.stringify(data.sliderImages));
+                if (data.featuredProducts) localStorage.setItem('featuredProducts', JSON.stringify(data.featuredProducts));
+            }
+            
+            // Reload all sections
+            loadStoreSettings();
+            loadSliderImages();
+            loadBrands();
+            loadFlavors();
+            loadProductsAdmin();
+            loadFeaturedProducts();
+            updateDashboardStats();
+            
+            alert('✅ Data imported successfully!\n\nAll your products, brands, flavors, and settings have been loaded.');
+            
+            // Reset file input
+            input.value = '';
+        } catch (error) {
+            console.error('Import error:', error);
+            alert('❌ Error importing data: ' + error.message + '\n\nPlease make sure you selected a valid JSON file.');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// Create backup
+function createBackup() {
+    manualSaveDataFile();
+}
+
 // Make functions available globally
 window.triggerExcelImport = triggerExcelImport;
 window.handleExcelImport = handleExcelImport;
@@ -2599,3 +2735,137 @@ window.editFlavor = editFlavor;
 window.deleteFlavor = deleteFlavor;
 window.addFlavor = addFlavor;
 window.syncFlavorsFromProducts = syncFlavorsFromProducts;
+// Remove all images from all products
+async function removeAllProductImages() {
+    // Confirm action
+    const confirmed = confirm(
+        '⚠️ WARNING: This will remove ALL images from ALL products!\n\n' +
+        'This includes:\n' +
+        '• Main product images\n' +
+        '• All flavor images\n' +
+        '• Additional product images\n\n' +
+        'Product data (name, price, description, etc.) will remain intact.\n\n' +
+        'This action CANNOT be undone!\n\n' +
+        'Are you sure you want to continue?'
+    );
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    // Second confirmation
+    const doubleConfirmed = confirm(
+        '⚠️ FINAL CONFIRMATION\n\n' +
+        'You are about to remove all images from all products.\n\n' +
+        'Click OK to proceed or Cancel to abort.'
+    );
+    
+    if (!doubleConfirmed) {
+        return;
+    }
+    
+    try {
+        // Get all products
+        let products = JSON.parse(localStorage.getItem('products') || '[]');
+        let removedCount = 0;
+        
+        // Remove images from each product
+        products = products.map(product => {
+            let hasImage = false;
+            
+            // Remove main product image
+            if (product.image && product.image.trim() !== '') {
+                product.image = '';
+                hasImage = true;
+            }
+            
+            // Remove additional images
+            if (product.additionalImages && Array.isArray(product.additionalImages)) {
+                product.additionalImages = [];
+                hasImage = true;
+            }
+            if (product.images && Array.isArray(product.images)) {
+                product.images = [];
+                hasImage = true;
+            }
+            
+            // Remove images from flavors
+            if (product.flavors && Array.isArray(product.flavors)) {
+                product.flavors = product.flavors.map(flavor => {
+                    if (flavor.image && flavor.image.trim() !== '') {
+                        flavor.image = '';
+                        hasImage = true;
+                    }
+                    return flavor;
+                });
+            }
+            
+            if (hasImage) removedCount++;
+            
+            return product;
+        });
+        
+        // Save updated products
+        localStorage.setItem('products', JSON.stringify(products));
+        
+        // Auto-save to JSON file
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
+        
+        // Reload products in admin panel
+        loadProductsAdmin();
+        updateDashboardStats();
+        
+        alert(`✅ Successfully removed all images from ${removedCount} product(s)!\n\nAll product images, flavor images, and additional images have been cleared.\n\nProduct information (name, price, description, etc.) remains intact.`);
+        
+    } catch (error) {
+        console.error('Error removing product images:', error);
+        alert('❌ Error removing product images. Please try again.');
+    }
+}
+
+// Save all data to code files (permanent storage)
+async function saveAllDataToCode() {
+    if (typeof window.permanentStorage === 'undefined' || !window.permanentStorage.saveAllDataPermanently) {
+        alert('Permanent storage system not loaded. Please refresh the page.');
+        return;
+    }
+    
+    const confirmed = confirm(
+        '💾 Save All Data to Code Files\n\n' +
+        'This will generate and download:\n' +
+        '• slider-data.js (with embedded slider images)\n' +
+        '• embedded-images.js (with all product images as base64)\n' +
+        '• products-data.js (with all product data)\n\n' +
+        'These files will contain all your data embedded in code for maximum portability.\n\n' +
+        'Continue?'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        alert('⏳ Processing... This may take a moment while images are converted to base64.\n\nYou will receive multiple file downloads.');
+        const success = await window.permanentStorage.saveAllDataPermanently();
+        
+        if (success) {
+            alert('✅ All data saved to code files!\n\n' +
+                  'Files downloaded:\n' +
+                  '• slider-data.js\n' +
+                  '• embedded-images.js\n' +
+                  '• products-data.js\n\n' +
+                  'Please save these files to your project folder. They contain all your data embedded in code.');
+        } else {
+            alert('⚠️ Some errors occurred during save. Check console for details.');
+        }
+    } catch (error) {
+        console.error('Error saving to code:', error);
+        alert('❌ Error saving to code files: ' + error.message);
+    }
+}
+
+window.manualSaveDataFile = manualSaveDataFile;
+window.importData = importData;
+window.createBackup = createBackup;
+window.removeAllProductImages = removeAllProductImages;
+window.saveAllDataToCode = saveAllDataToCode;

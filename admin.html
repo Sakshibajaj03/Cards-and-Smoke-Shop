@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="data-manager.js"></script>
+    <script src="permanent-storage.js"></script>
     <script src="products-data.js"></script>
     <script src="embedded-images.js"></script>
 </head>
@@ -542,10 +544,10 @@
                     </div>
                     <div class="admin-card">
                         <div class="data-actions">
-                            <button class="data-action-btn export-btn" onclick="exportData()">
-                                <i class="fas fa-download"></i>
-                                <span>Export All Data</span>
-                                <small>Download JSON file</small>
+                            <button class="data-action-btn save-btn" onclick="manualSaveDataFile()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="fas fa-save"></i>
+                                <span>Save Data to File</span>
+                                <small>Download store-data.json</small>
                             </button>
                             <label for="importFile" class="data-action-btn import-btn">
                                 <i class="fas fa-upload"></i>
@@ -554,35 +556,48 @@
                                 <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(this)">
                             </label>
                             <button class="data-action-btn backup-btn" onclick="createBackup()">
-                                <i class="fas fa-save"></i>
+                                <i class="fas fa-copy"></i>
                                 <span>Create Backup</span>
                                 <small>Save all data</small>
                             </button>
+                            <button class="data-action-btn" onclick="saveAllDataToCode()" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                <i class="fas fa-code"></i>
+                                <span>Save All to Code Files</span>
+                                <small>Embed in JS files for portability</small>
+                            </button>
+                            <button class="data-action-btn" onclick="removeAllProductImages()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                                <i class="fas fa-trash-alt"></i>
+                                <span>Remove All Product Images</span>
+                                <small>Clear all product & flavor images</small>
+                            </button>
                         </div>
                         <div class="data-info">
-                            <h3><i class="fas fa-info-circle"></i> How to Export & Transfer to Another Computer:</h3>
-                            <ol>
-                                <li><strong>Export Data:</strong> Click "Export All Data" - this will download:
-                                    <ul>
-                                        <li>A JSON file with all your store data</li>
-                                        <li>All product images as separate files (product-*.jpg)</li>
-                                        <li>All slider images as separate files (slider-*.jpg)</li>
+                            <h3><i class="fas fa-info-circle"></i> File-Based Storage System:</h3>
+                            <p style="margin-bottom: 15px; padding: 15px; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                                <strong>✅ Automatic Portability:</strong> All your data is automatically saved to <code>store-data.json</code> file. When you add products, images, or make changes, the system auto-saves to ensure your data persists when you copy the folder to another computer.
+                            </p>
+                            <h4 style="margin-top: 20px; margin-bottom: 10px;">How It Works:</h4>
+                            <ol style="line-height: 1.8;">
+                                <li><strong>Auto-Save:</strong> Every time you save a product, brand, flavor, or slider image, the data is automatically saved to both localStorage (for fast access) and <code>store-data.json</code> file.</li>
+                                <li><strong>Manual Save:</strong> Click "Save Data to File" button to manually download the latest <code>store-data.json</code> file. Replace the existing file in your project folder with the downloaded one.</li>
+                                <li><strong>Image Storage:</strong> 
+                                    <ul style="margin-top: 5px;">
+                                        <li>Images are saved to the <code>images/</code> folder</li>
+                                        <li>Product images: <code>images/products/[product-id]/</code></li>
+                                        <li>Slider images: <code>images/slide image/</code></li>
                                     </ul>
                                 </li>
-                                <li><strong>Create Images Folder:</strong> Create a folder named "images" in your website directory</li>
-                                <li><strong>Copy Images:</strong> Move all downloaded image files (product-*.jpg, slider-*.jpg) into the "images" folder</li>
-                                <li><strong>Transfer to New Computer:</strong> Copy the entire website folder including:
-                                    <ul>
+                                <li><strong>Transfer to Another Computer:</strong> Simply copy the entire folder including:
+                                    <ul style="margin-top: 5px;">
                                         <li>All HTML, CSS, JS files</li>
-                                        <li>The "images" folder with all image files</li>
-                                        <li>The exported JSON file (optional - for backup)</li>
+                                        <li>The <code>store-data.json</code> file</li>
+                                        <li>The entire <code>images/</code> folder with all subdirectories</li>
                                     </ul>
                                 </li>
-                                <li><strong>Import on New Computer:</strong> Open admin panel and click "Import Data", then select the JSON file</li>
-                                <li><strong>Verify:</strong> Make sure the "images" folder is in the same directory as your HTML files</li>
+                                <li><strong>Import Data:</strong> If you have a <code>store-data.json</code> file from another computer, use "Import Data" to load it.</li>
                             </ol>
-                            <p style="margin-top: 15px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                                <strong>Important:</strong> Images are stored as files in the "images" folder, not in localStorage. This allows you to easily transfer your website to another computer by copying the entire folder.
+                            <p style="margin-top: 15px; padding: 15px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 4px;">
+                                <strong>✨ No Export Needed:</strong> Just copy the folder and everything works! The <code>store-data.json</code> file and <code>images/</code> folder contain all your data.
                             </p>
                         </div>
                     </div>
