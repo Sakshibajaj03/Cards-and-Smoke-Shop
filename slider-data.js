@@ -1,11 +1,19 @@
 // Slider Images Data
-// This file contains slider images for the homepage carousel
-// Auto-updated by permanent storage system
+// This file loads slider images from embedded data (embedded-data.js)
+// All data is now hardcoded for portability
 
 // Function to get slider images
 // Returns an array of image URLs or base64 data URLs
 window.getSliderImages = function() {
-    // Try to get from localStorage first (user's current slider images)
+    // First, try to get from embedded data
+    if (window.EMBEDDED_STORE_DATA && window.EMBEDDED_STORE_DATA.sliderImages && 
+        Array.isArray(window.EMBEDDED_STORE_DATA.sliderImages) &&
+        window.EMBEDDED_STORE_DATA.sliderImages.length > 0 &&
+        window.EMBEDDED_STORE_DATA.sliderImages.some(img => img && img.trim() !== '')) {
+        return window.EMBEDDED_STORE_DATA.sliderImages;
+    }
+    
+    // Try to get from localStorage (user's current slider images)
     const storedImages = JSON.parse(localStorage.getItem('sliderImages') || '[]');
     
     // If there are stored images, return them

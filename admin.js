@@ -2,13 +2,23 @@
 
 // Initialize admin page
 document.addEventListener('DOMContentLoaded', async function() {
-    // Load data from JSON file first (for portability)
+    // FIRST: Load data from embedded data (hardcoded in embedded-data.js)
+    try {
+        if (typeof window.initializeEmbeddedData === 'function') {
+            window.initializeEmbeddedData();
+            console.log('✅ Loaded data from embedded-data.js');
+        }
+    } catch (error) {
+        console.log('Could not load from embedded data');
+    }
+    
+    // SECOND: Load data from JSON file (for any additional data)
     try {
         if (typeof window.dataManager !== 'undefined' && window.dataManager.initializeDataFromFile) {
             await window.dataManager.initializeDataFromFile();
         }
     } catch (error) {
-        console.log('Could not load from file, using default initialization');
+        console.log('Could not load from file, using embedded data initialization');
     }
     
     // Initialize all data structures for portability
@@ -97,16 +107,23 @@ function initializeAllData() {
 
 // Sidebar Navigation
 function showSection(sectionId) {
+    console.log('showSection called with:', sectionId);
+    
     // Hide all sections
     const sections = document.querySelectorAll('.admin-section');
     sections.forEach(section => {
         section.classList.remove('active');
+        section.style.display = 'none';
     });
     
     // Show selected section
     const targetSection = document.getElementById(sectionId);
     if (targetSection) {
         targetSection.classList.add('active');
+        targetSection.style.display = 'block';
+        console.log('Section shown:', sectionId);
+    } else {
+        console.error('Section not found:', sectionId);
     }
     
     // Update active nav item
@@ -117,8 +134,11 @@ function showSection(sectionId) {
     
     // Find and activate corresponding nav item
     const activeNav = Array.from(navItems).find(item => {
-        const href = item.getAttribute('href') || item.getAttribute('onclick');
-        return href && href.includes(sectionId);
+        const href = item.getAttribute('href');
+        const onclick = item.getAttribute('onclick');
+        if (href && href.includes(sectionId)) return true;
+        if (onclick && onclick.includes(sectionId)) return true;
+        return false;
     });
     if (activeNav) {
         activeNav.classList.add('active');
@@ -150,11 +170,18 @@ function showSection(sectionId) {
         updateDashboardStats();
     } else if (sectionId === 'featured') {
         loadFeaturedProducts();
+    } else if (sectionId === 'slider') {
+        loadSliderImages();
+    } else if (sectionId === 'settings') {
+        loadStoreSettings();
     }
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// Make showSection globally available
+window.showSection = showSection;
 
 function updatePageTitle(sectionId) {
     const titles = {
@@ -225,6 +252,17 @@ function saveStoreSettings() {
     const storeName = document.getElementById('storeName').value;
     if (storeName.trim()) {
         localStorage.setItem('storeName', storeName);
+        
+        // Auto-save to JSON file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
+        
+        // Auto-save to code files (permanent storage)
+        if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+            window.permanentStorage.autoSavePermanently();
+        }
+        
         alert('Store settings saved successfully!');
         updateDashboardStats();
     } else {
@@ -249,37 +287,17 @@ async function handleSliderImageUpload(index, input) {
     const file = input.files[0];
     if (!file) return;
     
-    // Try to use data manager to save image to folder
-    let imageUrl = '';
-    if (typeof window.dataManager !== 'undefined' && window.dataManager.uploadSliderImage) {
-        try {
-            imageUrl = await window.dataManager.uploadSliderImage(file, index);
-            // If it returned a path (not data URL), convert file to data URL for display
-            if (!imageUrl.startsWith('data:')) {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    imageUrl = e.target.result;
-                    saveSliderImageToStorage(index, imageUrl);
-                };
-                reader.readAsDataURL(file);
-                return;
-            }
-        } catch (error) {
-            console.error('Error uploading slider image:', error);
-        }
-    }
-    
-    // Fallback to base64 conversion
-    if (!imageUrl) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            imageUrl = e.target.result;
-            saveSliderImageToStorage(index, imageUrl);
-        };
-        reader.readAsDataURL(file);
-    } else {
+    // ALWAYS save slider images as base64 for maximum portability
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageUrl = e.target.result; // This is base64 data URL
         saveSliderImageToStorage(index, imageUrl);
-    }
+        console.log(`✅ Slider image ${index} saved as base64 for portability`);
+    };
+    reader.onerror = function() {
+        alert('Error reading slider image file. Please try again.');
+    };
+    reader.readAsDataURL(file);
 }
 
 function saveSliderImageToStorage(index, imageUrl) {
@@ -697,6 +715,16 @@ function assignSelectedFlavors(brandName) {
         assignFlavorToBrand(brandName, flavor);
     });
     
+    // Auto-save to JSON file (for portability) - after all assignments
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
+    
     document.querySelector('[style*="position: fixed"]').remove();
     loadBrands();
     updateDashboardStats();
@@ -712,6 +740,11 @@ function assignFlavorToBrand(brandName, flavorName) {
     if (!brandFlavors[brandName].includes(flavorName)) {
         brandFlavors[brandName].push(flavorName);
         localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+        
+        // Auto-save to JSON file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
     }
 }
 
@@ -726,6 +759,11 @@ function removeFlavorFromBrand(brandName, flavorName) {
             delete brandFlavors[brandName];
         }
         localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+        
+        // Auto-save to JSON file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
     }
     
     loadBrands();
@@ -804,6 +842,17 @@ function updateBrandDisplayOrder(index, brandName, newOrder) {
         brands[brandIndex].displayOrder = orderNum;
         // Save normalized brands
         localStorage.setItem('brands', JSON.stringify(brands));
+        
+        // Auto-save to JSON file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
+        
+        // Auto-save to code files (permanent storage)
+        if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+            window.permanentStorage.autoSavePermanently();
+        }
+        
         loadBrands();
         updateDashboardStats();
     }
@@ -846,6 +895,16 @@ function updateBrandName(index, oldName, newName) {
     });
     localStorage.setItem('products', JSON.stringify(products));
     
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
+    
     loadBrands();
     populateBrandAndFlavorSelects();
     updateDashboardStats();
@@ -876,6 +935,17 @@ function addBrand() {
     
     brands.push({ name: brandName, displayOrder: maxOrder + 1 });
     localStorage.setItem('brands', JSON.stringify(brands));
+    
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
+    
     input.value = '';
     loadBrands();
     populateBrandAndFlavorSelects();
@@ -908,6 +978,16 @@ function deleteBrand(index) {
     if (brandFlavors[deletedBrand]) {
         delete brandFlavors[deletedBrand];
         localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
+    }
+    
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
     }
     
     loadBrands();
@@ -1031,6 +1111,17 @@ function addFlavor() {
     // Add to flavors list
     flavors.push(flavorName);
     localStorage.setItem('flavors', JSON.stringify(flavors));
+    
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
+    
     input.value = '';
     loadFlavors();
     populateBrandAndFlavorSelects();
@@ -1065,6 +1156,17 @@ function editFlavor(flavorName, index) {
     
     if (updated) {
         localStorage.setItem('products', JSON.stringify(products));
+        
+        // Auto-save to JSON file (for portability)
+        if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+            window.dataManager.autoSaveData(true);
+        }
+        
+        // Auto-save to code files (permanent storage)
+        if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+            window.permanentStorage.autoSavePermanently();
+        }
+        
         loadFlavors();
         loadProductsAdmin();
         populateBrandAndFlavorSelects();
@@ -1110,6 +1212,16 @@ function deleteFlavor(flavorName) {
     let flavors = JSON.parse(localStorage.getItem('flavors') || '[]');
     flavors = flavors.filter(f => f !== flavorName);
     localStorage.setItem('flavors', JSON.stringify(flavors));
+    
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
     
     loadFlavors();
     populateBrandAndFlavorSelects();
@@ -1254,6 +1366,17 @@ function removeFeaturedProduct(slotIndex) {
     const featuredProducts = JSON.parse(localStorage.getItem('featuredProducts') || '[]');
     featuredProducts[slotIndex] = '';
     localStorage.setItem('featuredProducts', JSON.stringify(featuredProducts));
+    
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
+    
     loadFeaturedProducts();
 }
 
@@ -1273,6 +1396,16 @@ function saveFeaturedProducts() {
     const savedProducts = featuredProducts.slice(0, 4);
     
     localStorage.setItem('featuredProducts', JSON.stringify(savedProducts));
+    
+    // Auto-save to JSON file (for portability)
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+        window.dataManager.autoSaveData(true);
+    }
+    
+    // Auto-save to code files (permanent storage)
+    if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+        window.permanentStorage.autoSavePermanently();
+    }
     
     // Verify what was saved
     const products = JSON.parse(localStorage.getItem('products') || '[]');
@@ -1726,28 +1859,10 @@ function saveProduct() {
         let additionalImages = [];
         
         if (imageInput.files[0]) {
-            // Try to use data manager to save image to folder
-            if (typeof window.dataManager !== 'undefined' && window.dataManager.uploadProductImage) {
-                try {
-                    const productIdForImage = productId || Date.now().toString();
-                    const savedPath = await window.dataManager.uploadProductImage(imageInput.files[0], productIdForImage);
-                    // If it returned a path, convert to data URL for display, otherwise use the data URL
-                    if (!savedPath.startsWith('data:')) {
-                        productImage = await processImage(imageInput.files[0]);
-                        // Store both path and data URL - path for portability, data URL for display
-                        productImage = savedPath; // Use path for storage
-                    } else {
-                        productImage = savedPath;
-                    }
-                } catch (error) {
-                    console.error('Error uploading image with data manager:', error);
-                    // Fallback to base64
-                    productImage = await processImage(imageInput.files[0]);
-                }
-            } else {
-                // Fallback to base64
-                productImage = await processImage(imageInput.files[0]);
-            }
+            // ALWAYS save images as base64 for maximum portability
+            // This ensures the website works on any device without needing image files
+            productImage = await processImage(imageInput.files[0]);
+            console.log('✅ Product image saved as base64 for portability');
         } else if (productId && !shouldRemoveImage) {
             const existingProduct = products.find(p => p.id === productId);
             if (existingProduct) {
@@ -1761,8 +1876,10 @@ function saveProduct() {
         }
         
         if (additionalImagesInput.files.length > 0) {
+            // ALWAYS save additional images as base64 for maximum portability
             const promises = Array.from(additionalImagesInput.files).map(file => processImage(file));
             additionalImages = await Promise.all(promises);
+            console.log(`✅ ${additionalImages.length} additional images saved as base64 for portability`);
         }
         
         // Process flavors (images are optional)
@@ -1779,24 +1896,9 @@ function saveProduct() {
             let flavorImage = '';
             
             if (imageInputEl.files && imageInputEl.files[0]) {
-                // Try to use data manager to save flavor image
-                if (typeof window.dataManager !== 'undefined' && window.dataManager.uploadProductImage) {
-                    try {
-                        const productIdForImage = productId || Date.now().toString();
-                        const savedPath = await window.dataManager.uploadProductImage(imageInputEl.files[0], productIdForImage, flavorName);
-                        if (!savedPath.startsWith('data:')) {
-                            flavorImage = await processImage(imageInputEl.files[0]);
-                            flavorImage = savedPath; // Use path for storage
-                        } else {
-                            flavorImage = savedPath;
-                        }
-                    } catch (error) {
-                        console.error('Error uploading flavor image:', error);
-                        flavorImage = await processImage(imageInputEl.files[0]);
-                    }
-                } else {
-                    flavorImage = await processImage(imageInputEl.files[0]);
-                }
+                // ALWAYS save flavor images as base64 for maximum portability
+                flavorImage = await processImage(imageInputEl.files[0]);
+                console.log('✅ Flavor image saved as base64 for portability');
             } else if (previewEl) {
                 flavorImage = previewEl.src;
             }
@@ -2133,12 +2235,12 @@ function triggerExcelImport() {
 }
 
 // Handle Excel file import
-function handleExcelImport(event) {
+async function handleExcelImport(event) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             let workbook;
             const data = e.target.result;
@@ -2390,6 +2492,16 @@ function handleExcelImport(event) {
             const mergedProducts = Array.from(productMap.values());
             localStorage.setItem('products', JSON.stringify(mergedProducts));
             localStorage.removeItem('dataManuallyCleared');
+            
+            // Auto-save to JSON file (for portability)
+            if (typeof window.dataManager !== 'undefined' && window.dataManager.autoSaveData) {
+                await window.dataManager.autoSaveData(false); // Not silent - show download if needed
+            }
+            
+            // Auto-save to code files (permanent storage)
+            if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.autoSavePermanently) {
+                await window.permanentStorage.autoSavePermanently();
+            }
             
             alert(`✅ Import successful!\n\nProducts processed: ${productsData.length}\nProducts added: ${productsData.length - skippedDuplicates}\nProducts skipped (already existed): ${skippedDuplicates}\nTotal products after import: ${mergedProducts.length}\nBrands: ${mergedBrands.length}\nFlavors: ${mergedFlavors.length}`);
             location.reload();
@@ -2669,6 +2781,39 @@ function manualSaveDataFile() {
         alert('Data manager not loaded. Please refresh the page.');
     }
 }
+
+// Force save everything immediately with image conversion
+async function forceSaveEverythingNow() {
+    if (typeof window.dataManager !== 'undefined' && window.dataManager.forceSaveEverything) {
+        try {
+            // Show loading message
+            const loadingMsg = alert('💾 Saving everything...\n\nThis may take a moment while images are converted to base64 format.\n\nPlease wait...');
+            
+            // Save to JSON file with images
+            const result = await window.dataManager.forceSaveEverything();
+            
+            // Also save to code files
+            if (typeof window.permanentStorage !== 'undefined' && window.permanentStorage.saveAllDataPermanently) {
+                await window.permanentStorage.saveAllDataPermanently();
+            }
+            
+            if (result && result.success) {
+                alert('✅ SUCCESS!\n\nAll your data has been saved:\n\n' +
+                      '1. ✅ store-data.json - Contains all data with images as base64\n' +
+                      '2. ✅ Code files - Images embedded in JavaScript files\n\n' +
+                      'You can now copy this entire folder to another device and everything will work!');
+            }
+        } catch (error) {
+            console.error('Error saving:', error);
+            alert('❌ Error saving data: ' + error.message);
+        }
+    } else {
+        alert('Data manager not loaded. Please refresh the page.');
+    }
+}
+
+// Make function globally available
+window.forceSaveEverythingNow = forceSaveEverythingNow;
 
 // Import data from JSON file
 function importData(input) {

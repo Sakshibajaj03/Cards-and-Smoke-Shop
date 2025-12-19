@@ -1,19 +1,34 @@
 // Initial Products Data
-// This file contains initial/default products for the store
-// Products are now primarily stored in store-data.json, but this file serves as a fallback/initialization
+// This file loads products from embedded data (embedded-data.js)
+// All data is now hardcoded in embedded-data.js for portability
 
-// Initial products array - empty by default, populated from store-data.json or admin panel
-window.INITIAL_PRODUCTS = [];
+// Get products from embedded data
+window.INITIAL_PRODUCTS = function() {
+    if (window.EMBEDDED_STORE_DATA && window.EMBEDDED_STORE_DATA.products) {
+        return window.EMBEDDED_STORE_DATA.products;
+    }
+    return [];
+}();
 
-// Initial store data configuration
-window.INITIAL_STORE_DATA = {
-    storeName: 'Premium Vape Shop',
-    brands: [],
-    flavors: [],
-    sliderImages: []
-};
+// Initial store data configuration from embedded data
+window.INITIAL_STORE_DATA = function() {
+    if (window.EMBEDDED_STORE_DATA) {
+        return {
+            storeName: window.EMBEDDED_STORE_DATA.storeName || 'Premium Vape Shop',
+            brands: window.EMBEDDED_STORE_DATA.brands || [],
+            flavors: window.EMBEDDED_STORE_DATA.flavors || [],
+            sliderImages: window.EMBEDDED_STORE_DATA.sliderImages || []
+        };
+    }
+    return {
+        storeName: 'Premium Vape Shop',
+        brands: [],
+        flavors: [],
+        sliderImages: []
+    };
+}();
 
-// Note: Since we're using file-based storage (store-data.json),
-// products should be added through the admin panel.
-// This file serves as a fallback for initialization if store-data.json doesn't exist.
+// Note: All data is now embedded in embedded-data.js
+// This ensures the site works automatically when moved to another PC
+// The embedded data is automatically loaded and initialized on page load
 

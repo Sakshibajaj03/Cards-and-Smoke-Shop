@@ -155,19 +155,26 @@ function initializeData() {
     }
 }
 
-// Load data from JSON file first, then initialize
+// Load data from embedded data first, then JSON file, then initialize
 (async function() {
     try {
+        // FIRST: Initialize from embedded data (hardcoded in embedded-data.js)
+        if (typeof window.initializeEmbeddedData === 'function') {
+            window.initializeEmbeddedData();
+            console.log('✅ Loaded data from embedded-data.js');
+        }
+        
+        // SECOND: Try to load from JSON file (for any additional data)
         if (typeof window.dataManager !== 'undefined' && window.dataManager.initializeDataFromFile) {
             await window.dataManager.initializeDataFromFile();
         }
     } catch (error) {
-        console.log('Could not load from file, using default initialization');
+        console.log('Could not load from file, using embedded data initialization');
     }
     initializeData();
 })();
 
-// Initialize products from images (only if products don't exist or version updated)
+// Initialize products from embedded data (only if products don't exist or version updated)
 function initializeProducts() {
     // Respect manual clear flag: do not auto-initialize after clearing
     if (localStorage.getItem('dataManuallyCleared') === 'true') {
@@ -182,7 +189,7 @@ function initializeProducts() {
         return;
     }
 
-    console.log('Synchronizing product catalog (Version ' + DATA_VERSION + ')...');
+    console.log('Synchronizing product catalog from embedded data (Version ' + DATA_VERSION + ')...');
 
     // Helper function to get embedded image or fallback to regular path
     function getProductImage(imagePath) {
