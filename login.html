@@ -11,6 +11,8 @@
     <title>Login - Premium Store</title>
     <link rel="stylesheet" href="styles.css?v=1.0.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="products-data.js?v=1.0.0"></script>
+    <script src="embedded-images.js?v=1.0.0"></script>
     <script src="cache-buster.js?v=1.0.0"></script>
     <style>
         .login-container {
@@ -192,7 +194,8 @@
             </form>
             
             <div class="login-footer">
-                <p>Default: <strong>admin</strong> / <strong>admin123</strong></p>
+                <p>Default Admin: <strong>admin</strong> / <strong>admin123</strong></p>
+                <p style="margin-top: 8px;">Don't have an account? <a href="register.html">Register</a></p>
                 <p style="margin-top: 16px;">
                     <a href="index.html">← Back to Store</a>
                 </p>
@@ -200,13 +203,8 @@
         </div>
     </div>
     
+    <script src="app.js?v=1.0.0"></script>
     <script>
-        // Default admin credentials
-        const ADMIN_CREDENTIALS = {
-            username: 'admin',
-            password: 'admin123'
-        };
-        
         function handleLogin(event) {
             event.preventDefault();
             
@@ -218,31 +216,39 @@
             errorMessage.classList.remove('show');
             errorMessage.textContent = '';
             
-            // Validate credentials
-            if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-                // Store login session
-                sessionStorage.setItem('isAdminLoggedIn', 'true');
-                sessionStorage.setItem('adminUsername', username);
-                
-                // Redirect to admin panel
-                window.location.href = 'admin.html';
+            // Use app.js auth
+            if (typeof loginUser === 'function') {
+                const result = loginUser(username, password);
+                if (result.success) {
+                    const user = result.user;
+                    if (user && user.role === 'admin') {
+                        sessionStorage.setItem('isAdminLoggedIn', 'true');
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    errorMessage.textContent = result.message || 'Invalid username or password. Please try again.';
+                    errorMessage.classList.add('show');
+                    const loginBox = document.querySelector('.login-box');
+                    loginBox.style.animation = 'shake 0.5s';
+                    setTimeout(() => { loginBox.style.animation = ''; }, 500);
+                }
             } else {
-                // Show error
-                errorMessage.textContent = 'Invalid username or password. Please try again.';
+                errorMessage.textContent = 'System error. Please try again later.';
                 errorMessage.classList.add('show');
-                
-                // Shake animation
-                const loginBox = document.querySelector('.login-box');
-                loginBox.style.animation = 'shake 0.5s';
-                setTimeout(() => {
-                    loginBox.style.animation = '';
-                }, 500);
             }
         }
         
-        // Check if already logged in
-        if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
-            window.location.href = 'admin.html';
+        // Redirect if already logged in
+        if (typeof getCurrentUser === 'function') {
+            const current = getCurrentUser();
+            if (current && current.role === 'admin') {
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+                window.location.href = 'admin.html';
+            } else if (current) {
+                window.location.href = 'index.html';
+            }
         }
         
         // Add shake animation

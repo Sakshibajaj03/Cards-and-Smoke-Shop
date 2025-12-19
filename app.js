@@ -1,3 +1,4 @@
+const DATA_VERSION = '1.0.5';
 // Data Storage using LocalStorage
 const STORAGE_KEYS = {
     STORE_NAME: 'storeName',
@@ -5,14 +6,94 @@ const STORAGE_KEYS = {
     BRANDS: 'brands',
     FLAVORS: 'flavors',
     SLIDER_IMAGES: 'sliderImages',
-    CART: 'cart'
+    CART: 'cart',
+    USERS: 'users',
+    CURRENT_USER: 'currentUser'
 };
+
+// Auth Functions
+function registerUser(username, email, password) {
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+    
+    // Check if user exists
+    if (users.some(u => u.username === username)) {
+        return { success: false, message: 'Username already exists' };
+    }
+    if (users.some(u => u.email === email)) {
+        return { success: false, message: 'Email already registered' };
+    }
+    
+    const newUser = {
+        id: Date.now().toString(),
+        username,
+        email,
+        password, // In a real app, hash this!
+        role: 'customer',
+        createdAt: new Date().toISOString()
+    };
+    
+    users.push(newUser);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    return { success: true };
+}
+
+function loginUser(username, password) {
+    // Admin check
+    if (username === 'admin' && password === 'admin123') {
+        const adminUser = { username: 'admin', role: 'admin' };
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(adminUser));
+        return { success: true, user: adminUser };
+    }
+    
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+    const user = users.find(u => u.username === username && u.password === password);
+    
+    if (user) {
+        // Don't store password in session
+        const { password, ...safeUser } = user;
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(safeUser));
+        return { success: true, user: safeUser };
+    }
+    
+    return { success: false, message: 'Invalid credentials' };
+}
+
+function logoutUser() {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    try {
+        sessionStorage.removeItem('isAdminLoggedIn');
+    } catch (e) {}
+    window.location.href = 'index.html';
+}
+
+function getCurrentUser() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.CURRENT_USER) || 'null');
+}
+
+// Make globally available
+window.registerUser = registerUser;
+window.loginUser = loginUser;
+window.logoutUser = logoutUser;
+window.getCurrentUser = getCurrentUser;
 
 // Initialize default data
 function initializeData() {
+    // Force update check moved to initializeProducts for better merging
+    const initialData = window.INITIAL_STORE_DATA || {};
+    
     if (!localStorage.getItem(STORAGE_KEYS.STORE_NAME)) {
-        localStorage.setItem(STORAGE_KEYS.STORE_NAME, 'Premium Store');
+        localStorage.setItem(STORAGE_KEYS.STORE_NAME, initialData.storeName || 'Premium Store');
     }
+    if (initialData.brands && !localStorage.getItem(STORAGE_KEYS.BRANDS)) {
+        localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(initialData.brands));
+    }
+    if (initialData.flavors && !localStorage.getItem(STORAGE_KEYS.FLAVORS)) {
+        localStorage.setItem(STORAGE_KEYS.FLAVORS, JSON.stringify(initialData.flavors));
+    }
+    if (initialData.sliderImages && !localStorage.getItem(STORAGE_KEYS.SLIDER_IMAGES)) {
+        localStorage.setItem(STORAGE_KEYS.SLIDER_IMAGES, JSON.stringify(initialData.sliderImages));
+    }
+    
     if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
         localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify([]));
     }
@@ -20,7 +101,7 @@ function initializeData() {
         localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.FLAVORS)) {
-        localStorage.setItem(STORAGE_KEYS.FLAVORS, JSON.stringify(['Vanilla', 'Chocolate', 'Strawberry']));
+        localStorage.setItem(STORAGE_KEYS.FLAVORS, JSON.stringify([]));
     }
     
     // Initialize slider images - check data file first, then localStorage, then defaults
@@ -77,436 +158,95 @@ function initializeData() {
 // Initialize on page load
 initializeData();
 
-// Initialize products from images (only if products don't exist)
+// Initialize products from images (only if products don't exist or version updated)
 function initializeProducts() {
-    // Check if products already exist
-    const existingProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-    if (existingProducts.length > 0) {
-        return; // Products already exist, don't initialize
+    // Respect manual clear flag: do not auto-initialize after clearing
+    if (localStorage.getItem('dataManuallyCleared') === 'true') {
+        return;
     }
+    
+    const existingProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    const currentVersion = localStorage.getItem('app_data_version');
+    
+    // If products exist and version matches, we are done
+    if (existingProducts.length > 0 && currentVersion === DATA_VERSION) {
+        return;
+    }
+
+    console.log('Synchronizing product catalog (Version ' + DATA_VERSION + ')...');
 
     // Helper function to get embedded image or fallback to regular path
     function getProductImage(imagePath) {
-        // First try embedded images
+        if (!imagePath) return '';
+        
+        // Try to get from embedded images first
         if (typeof getEmbeddedImage === 'function') {
-            const embedded = getEmbeddedImage(imagePath);
+            // Try with original path, then without images/ prefix
+            let embedded = getEmbeddedImage(imagePath);
+            if (!embedded && imagePath.startsWith('images/')) {
+                embedded = getEmbeddedImage(imagePath.replace(/^images\//, ''));
+            }
             if (embedded) return embedded;
         }
+        
         // Fallback to regular image path
-        return 'images/' + imagePath;
+        return imagePath.startsWith('images/') ? imagePath : 'images/' + imagePath;
     }
 
-    const products = [
-        // YOVO Products
-        {
-            id: 'yovo_jb50000_pod_5pk',
-            name: 'YOVO JB50000 Pod 5pk',
-            brand: 'YOVO',
-            price: 42.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blue Razz Ice',
-            flavors: [
-                { name: 'Blue Razz Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Fresh Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Infinite Swirl', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Miami Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Orange Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Peach Raspberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Sour Apple', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Sour Strawberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Triple Berry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Watermelon Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') }
-            ],
-            image: 'images/yovo/yovo_jb50000_pod_5pk.jpg',
-            description: 'YOVO JB50000 Pod 5pk - Premium vaping experience with long-lasting pods. Master Case: 20 x 5pk.',
-            specs: ['50000 Puffs', '5 Pods per pack', 'Rechargeable']
-        },
-        {
-            id: 'yovo_jb50000_kit_5pk',
-            name: 'YOVO JB50000 Kit 5pk',
-            brand: 'YOVO',
-            price: 50.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Miami Mint',
-            flavors: [{
-                name: 'Miami Mint',
-                image: 'images/yovo/yovo_jb50000_kit_5pk.jpg'
-            }],
-            image: 'images/yovo/yovo_jb50000_kit_5pk.jpg',
-            description: 'YOVO JB50000 Kit 5pk - Complete starter kit with 5 pods. Master Case: 18 x 5pk.',
-            specs: ['50000 Puffs', '5 Kits per pack', 'Complete Starter Kit']
-        },
+    const products = window.INITIAL_PRODUCTS || [];
 
-        // Geek Bar Products
-        {
-            id: 'geek_bar_pulse_x_25000',
-            name: 'Geek Bar Pulse X 25000 Puffs 5pk',
-            brand: 'Geek Bar',
-            price: 62.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Orange Mint',
-            flavors: [
-                { name: 'Orange Mint', image: 'images/geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg' },
-                { name: 'Blue Razz Ice', image: 'images/geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg' }
-            ],
-            image: 'images/geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg',
-            description: 'Geek Bar Pulse X 25000 Puffs - World\'s first 3D curved screen with advanced technology. Experience ultimate vaping pleasure with 18mL e-liquid, 5% (50mg) nicotine strength, and 820mAh battery capacity.',
-            specs: ['25000 Puffs', '5 Devices per pack', '3D Curved Screen', 'Rechargeable', '18mL E-liquid', '5% (50mg) Nicotine', '820mAh Battery']
-        },
-        {
-            id: 'geek_bar_meloso_max_9000',
-            name: 'Geek Bar Meloso Max 9000 Puffs 5pk',
-            brand: 'Geek Bar',
-            price: 32.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Ginger Ale',
-            flavors: [
-                { name: 'Ginger Ale', image: 'images/geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg' },
-                { name: 'Tropical Rainbow', image: 'images/geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg' }
-            ],
-            image: 'images/geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg',
-            description: 'Geek Bar Meloso Max 9000 is loaded with 14mL of nic salt e-liquid and powered by a 600mAh battery, ensuring robust performance. The dual mesh coils deliver rich clouds and authentic flavors, while the adjustable airflow lets you customize your vaping style.',
-            specs: ['9000 Puffs per disposable', '14mL e-liquid capacity', '5% nicotine strength (50mg/mL)', '600mAh battery capacity', 'Dual mesh coils', 'Adjustable airflow', '5 Devices per pack']
-        },
-        {
-            id: 'ria_nv_30000',
-            name: 'RIA NV 30000 Puffs 5pk',
-            brand: 'RIA',
-            price: 62.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Watermelon Ice',
-            flavors: [{
-                name: 'Watermelon Ice',
-                image: 'images/ria/ria_nv_30000_puffs_5pk.jpg'
-            }],
-            image: 'images/ria/ria_nv_30000_puffs_5pk.jpg',
-            description: 'RIA NV 30000 Puffs - High capacity disposable vape with exceptional flavor.',
-            specs: ['30000 Puffs', '5 Devices per pack', 'Pre-filled']
-        },
-        {
-            id: 'digi_flavor_brk_battery',
-            name: 'Digi Flavor BRK Battery 5pk',
-            brand: 'Digi Flavor',
-            price: 33.75,
-            stock: 100,
-            status: 'available',
-            flavor: 'Standard',
-            flavors: [{
-                name: 'Standard',
-                image: 'images/digi flavor/digi_flavor_brk_battery_5pk.jpg'
-            }],
-            image: 'images/digi flavor/digi_flavor_brk_battery_5pk.jpg',
-            description: 'Digi Flavor BRK Battery 5pk - Rechargeable battery pack for DripFlavor devices.',
-            specs: ['Rechargeable Battery', '5 Batteries per pack', 'Compatible with DripFlavor']
-        },
+    // Merge hardcoded with existing products to preserve user changes
+    let finalProducts;
+    if (existingProducts.length > 0) {
+        const existingMap = new Map(existingProducts.map(p => [String(p.id), p]));
+        finalProducts = products.map(p => {
+            const existing = existingMap.get(String(p.id));
+            if (existing) {
+                // If existing.image is different from p.image, it's likely a user change or a previously saved state
+                // We should preserve it as long as it's not empty, or if the user explicitly cleared it
+                // To be safe, we only overwrite with p.image if existing.image is missing or null
+                let mergedImage = existing.image;
+                if (mergedImage === undefined || mergedImage === null) {
+                    mergedImage = p.image;
+                }
 
-        // VIHO Products
-        {
-            id: 'viho_trx_50000',
-            name: 'VIHO TRX 50000 Puffs 5pk',
-            brand: 'VIHO',
-            price: 52.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blue Razz Ice',
-            flavors: [
-                { name: 'Banana Taffy Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_banana_taffy_ice.jpg' },
-                { name: 'Blue Razz Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Clear', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Cherry Strazz', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Cola Slurpee', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Christmas Edition - Blue Razz Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Icy Mint', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Lemon Refresher', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Mango Tango', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Pina Coco', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Sour Blue Dust', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Strawmelon Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'Tobacco', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' },
-                { name: 'White Gummy Ice', image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg' }
-            ],
-            image: 'images/viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg',
-            description: 'VIHO TRX 50000 Puffs - Ultra-long lasting disposable vape with premium quality. Master Case: 20 x 5pk.',
-            specs: ['50000 Puffs', '5 Devices per pack', 'Pre-filled', '100% E-Liquid', '100% Battery']
-        },
-        {
-            id: 'viho_supercharge_pro_20000',
-            name: 'VIHO Supercharge PRO 20,000 Puffs 5pk',
-            brand: 'VIHO',
-            price: 45.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Tobacco Mint',
-            flavors: [{
-                name: 'Tobacco Mint',
-                image: 'images/viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg'
-            }],
-            image: 'images/viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg',
-            description: 'VIHO Supercharge PRO 20000 Puffs - High-performance disposable vape with refreshing mint flavor.',
-            specs: ['20000 Puffs', '5 Devices per pack', 'Pre-filled', '100% E-Liquid', '100% Battery']
-        },
+                return {
+                    ...p, // Start with hardcoded data (gets new flavors, etc.)
+                    ...existing, // Overwrite with user data
+                    image: mergedImage, // Ensure we use the best image
+                    // Explicitly preserve these fields from existing
+                    price: existing.price !== undefined ? existing.price : p.price,
+                    stock: existing.stock !== undefined ? existing.stock : p.stock,
+                    description: existing.description || p.description,
+                    status: existing.status || p.status,
+                    // Merge flavors carefully
+                    flavors: p.flavors.map(f => {
+                        if (!existing.flavors) return f;
+                        const existingFlavor = existing.flavors.find(ef => ef.name === f.name);
+                        return existingFlavor ? { ...f, ...existingFlavor } : f;
+                    })
+                };
+            }
+            return p;
+        });
+        
+        // Add any products the user created manually that aren't in the hardcoded list
+        const hardcodedIds = new Set(products.map(p => String(p.id)));
+        existingProducts.forEach(p => {
+            if (!hardcodedIds.has(String(p.id))) {
+                finalProducts.push(p);
+            }
+        });
+    } else {
+        finalProducts = products;
+    }
 
-        // JUUL Products
-        {
-            id: 'juul_pods',
-            name: 'JUUL Pods',
-            brand: 'JUUL',
-            price: 38.95,
-            stock: 100,
-            status: 'available',
-            flavor: 'Menthol',
-            flavors: [{
-                name: 'Menthol',
-                image: 'images/juul/juul_pods_menthol.jpg'
-            }],
-            image: 'images/juul/juul_pods_menthol.jpg',
-            description: 'JUUL Pods - Classic JUUL pods with 5.0% nicotine, 4 pods per pack.',
-            specs: ['5.0% Nicotine', '4 Pods per pack', 'Menthol flavor', 'Compatible with JUUL device']
-        },
-
-        // RAZ Products
-        {
-            id: 'raz_rx_50000',
-            name: 'RAZ RX 50000 Puffs 5pk',
-            brand: 'RAZ',
-            price: 57.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Code Blue',
-            flavors: [
-                { name: 'Code Blue', image: 'images/raz/raz_rx_50000_puffs_5pk.jpg' },
-                { name: 'Code White', image: 'images/raz/raz_rx_50000_puffs_5pk.jpg' }
-            ],
-            image: 'images/raz/raz_rx_50000_puffs_5pk.jpg',
-            description: 'RAZ RX 50000 Puffs - Advanced disposable vape with screen display showing battery and puff count. Master Case: 30 x 5pk.',
-            specs: ['50000 Puffs', '5 Devices per pack', 'Digital Display', 'Pre-filled']
-        },
-        {
-            id: 'ryl_classic_35000',
-            name: 'RYL Classic 35000 Puffs 5pk',
-            brand: 'RYL',
-            price: 43.75,
-            stock: 100,
-            status: 'available',
-            flavor: 'Watermelon Ice',
-            flavors: [{
-                name: 'Watermelon Ice',
-                image: 'images/ryl/ryl_classic_35000_puffs_5pk.jpg'
-            }],
-            image: 'images/ryl/ryl_classic_35000_puffs_5pk.jpg',
-            description: 'RYL Classic 35000 Puffs - Classic design with premium performance and flavor.',
-            specs: ['35000 Puffs', '5 Devices per pack', 'Pre-filled', 'Classic Design']
-        },
-        {
-            id: 'raz_ltx_25000',
-            name: 'RAZ LTX 25000 Puffs 5pk',
-            brand: 'RAZ',
-            price: 57.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Bangin Sour Berries',
-            flavors: [
-                { name: 'Bangin Sour Berries', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg' },
-                { name: 'Black Cherry Peach', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_black_cherry_peach.jpg' },
-                { name: 'Blue Raz Ice', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Blue Raz Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Blueberry Watermelon', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg' },
-                { name: 'Cherry Strapple', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_cherry_strapple.jpg' },
-                { name: 'Georgia Peach', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Hawaiian Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Iced Blue Dragon', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Miami Mint', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'New York Mint', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Night Crawler', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Orange Pineapple Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Raspberry Limeade', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Sour Apple Ice', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Sour Raspberry Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Strawberry Burst', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Strawberry Kiwi Pear', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Strawberry Peach Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Triple Berry Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Triple Berry Punch', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Tropical Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'White Grape Gush', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Wintergreen', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' }
-            ],
-            image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg',
-            description: 'RAZ LTX 25000 Puffs - Premium disposable vape with exceptional flavor variety. Master Case: 30 x 5pk.',
-            specs: ['25000 Puffs', '5 Devices per pack', 'Pre-filled']
-        },
-        {
-            id: 'raz_ltx_25000_zero',
-            name: 'RAZ LTX 25000 Puffs 0% Nicotine 5pk',
-            brand: 'RAZ',
-            price: 57.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Bangin Sour Berries',
-            flavors: [
-                { name: 'Bangin Sour Berries', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg' },
-                { name: 'Blueberry Watermelon', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg' },
-                { name: 'New York Mint', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' },
-                { name: 'Razzle Dazzle', image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg' }
-            ],
-            image: 'images/raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg',
-            description: 'RAZ LTX 25000 Puffs 0% Nicotine - Zero nicotine option with full flavor experience. Price Increase July 25, 2025. Master Case: 30 x 5pk.',
-            specs: ['25000 Puffs', '0% Nicotine', '5 Devices per pack', 'Pre-filled', 'Zero Nicotine']
-        },
-        {
-            id: 'raz_tn9000_zero',
-            name: 'RAZ TN9000 0% Nicotine 5pk',
-            brand: 'RAZ',
-            price: 48.75,
-            stock: 100,
-            status: 'available',
-            flavor: 'Watermelon Ice',
-            flavors: [{
-                name: 'Watermelon Ice',
-                image: 'images/raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg'
-            }],
-            image: 'images/raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg',
-            description: 'RAZ TN9000 0% Nicotine - Zero nicotine disposable vape with refreshing watermelon ice flavor.',
-            specs: ['9000 Puffs', '0% Nicotine', '5 Devices per pack', 'Pre-filled', 'Zero Nicotine']
-        },
-
-        // Air Bar Products
-        {
-            id: 'air_bar_nex_6500',
-            name: 'Air Bar Nex 6500 Puffs',
-            brand: 'Air Bar',
-            price: 75.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Clear',
-            flavors: [
-                { name: 'Clear', image: 'images/air bar/air_bar_nex_6500_puffs.jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/air_bar_nex_6500_puffs.jpg' },
-                { name: 'Strawberry Mango', image: 'images/air bar/air_bar_nex_6500_puffs.jpg' }
-            ],
-            image: 'images/air bar/air_bar_nex_6500_puffs.jpg',
-            description: 'Air Bar Nex 6500 Puffs - Compact and powerful disposable vape. NOTE: DAILY LIMIT PRODUCT. ONLY 1 ORDER PER DAY. Price Increase Sept 22, 2025.',
-            specs: ['6500 Puffs', 'Pre-filled', 'Disposable', 'Daily Limit: 1 Order Per Day']
-        },
-        {
-            id: 'air_bar_aura_25000',
-            name: 'Air Bar Aura 25,000 Puffs 5pk',
-            brand: 'Air Bar',
-            price: 45.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blue Mint',
-            flavors: [
-                { name: 'Blue Mint', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Blue Razz Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_razz_ice.jpg' },
-                { name: 'Blueberry Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Clear', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Coffee', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_mint.jpg' },
-                { name: 'Juicy Watermelon Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Miami Mint', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Sakura Grape', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' },
-                { name: 'Sour Apple Ice', image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg' }
-            ],
-            image: 'images/air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg',
-            description: 'Air Bar Aura 25000 Puffs - High-capacity disposable vape with vibrant design and premium flavors. Master Case: 30 x 5pk.',
-            specs: ['25000 Puffs', '5 Devices per pack', 'Pre-filled', 'Vibrant Design']
-        },
-        {
-            id: 'air_bar_diamond_spark_15000',
-            name: 'Air Bar Diamond Spark 15000 Puffs 5pk',
-            brand: 'Air Bar',
-            price: 40.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Love Story',
-            flavors: [
-                { name: 'Blue Razz Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Blueberry Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Cherry Cola', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Clear', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Coffee', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Fcuking FAB', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Frozen Strawberry', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Frozen Watermelon', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Grape Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Juicy Peach Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Love Story', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Sour Apple Ice', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Strawberry Watermelon', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' },
-                { name: 'Virginia Tobacco', image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg' }
-            ],
-            image: 'images/air bar/air-bar-diamond-spark-8-250x300.jpg',
-            description: 'Air Bar Diamond Spark 15000 Puffs - Sparkling design with exceptional flavor and performance.',
-            specs: ['15000 Puffs', '5 Devices per pack', 'Pre-filled', 'Diamond Design']
-        },
-        {
-            id: 'air_bar_diamond_plus_1000',
-            name: 'Air Bar Diamond+ 1000 Puffs 10pk',
-            brand: 'Air Bar',
-            price: 55.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Cool Mint',
-            flavors: [
-                { name: 'Blueberry Ice', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_blueberry_ice.jpg' },
-                { name: 'Clear', image: 'images/air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg' },
-                { name: 'Cool Mint', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_cool_mint.jpg' },
-                { name: 'Miami Mint', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_miami_mint.jpg' },
-                { name: 'Watermelon Ice', image: 'images/air bar/Airbar AURA   0912/air_bar_diamond_plus_watermelon_ice.jpg' }
-            ],
-            image: 'images/air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg',
-            description: 'Air Bar Diamond+ 1000 Puffs - Compact disposable vape with 10 devices per pack.',
-            specs: ['1000 Puffs per device', '10 Devices per pack', 'Pre-filled', 'Compact Design']
-        },
-        {
-            id: 'air_bar_mini_2000',
-            name: 'Air Bar Mini 2000 Puffs',
-            brand: 'Air Bar',
-            price: 50.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blueberry Mint',
-            flavors: [
-                { name: 'Blueberry Mint', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' },
-                { name: 'Frozen Peach', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' },
-                { name: 'Virginia Tobacco', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' },
-                { name: 'Watermelon Candy', image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg' }
-            ],
-            image: 'images/air bar/Air Bar Mini 2000 Puffs.jpg',
-            description: 'Air Bar Mini 2000 Puffs - Mini disposable vape with sweet candy flavors. Price Increase Sept 22, 2025.',
-            specs: ['2000 Puffs', 'Pre-filled', 'Mini Size']
-        },
-        {
-            id: 'air_bar_ab5000_10pk',
-            name: 'Air Bar AB5000 10pk',
-            brand: 'Air Bar',
-            price: 50.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Black Cheese Cake',
-            flavors: [
-                { name: 'Black Cheese Cake', image: 'images/air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_cheese_cake.jpg' },
-                { name: 'Berries Blast', image: 'images/air bar/Air Bar AB5000 10pk/air_bar_ab5000_berries_blast.jpg' },
-                { name: 'Black Ice', image: 'images/air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_ice.jpg' }
-            ],
-            image: 'images/air bar/Air Bar AB5000 10pk/Air Bar AB5000 10pk.jpg',
-            description: 'Air Bar AB5000 10pk - Value pack with 10 devices, perfect for sharing. Key Features: 10mL Pre-Filled E Liquid, 5% (50mg) Nicotine Strength, 1500mAh NON-Rechargeable Battery, Approximately 5000 Puffs, New PHC (Pre-Heating Coil) Technology.',
-            specs: ['5000 Puffs per device', '10 Devices per pack', '10mL Pre-Filled E Liquid', '5% (50mg) Nicotine', '1500mAh Battery', 'PHC Technology', 'Pre-filled', 'Value Pack']
-        }
-    ];
-
-    // Save products to localStorage
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+    // Save merged products to localStorage
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(finalProducts));
+    localStorage.setItem('app_data_version', DATA_VERSION);
     
     // Initialize brands from products (only unique brands)
-    const uniqueBrands = [...new Set(products.map(p => p.brand))];
+    const uniqueBrands = [...new Set(finalProducts.map(p => p.brand))];
     let existingBrands = JSON.parse(localStorage.getItem(STORAGE_KEYS.BRANDS) || '[]');
     
     // Normalize existing brands structure
@@ -769,22 +509,7 @@ window.goToSlide = goToSlide;
 
 // Load and display products
 function loadProducts() {
-    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS));
-    const productsGrid = document.getElementById('productsGrid');
-    const noProducts = document.getElementById('noProducts');
-    
-    if (!productsGrid) return;
-    
-    if (products.length === 0) {
-        productsGrid.style.display = 'none';
-        if (noProducts) noProducts.style.display = 'block';
-        return;
-    }
-    
-    productsGrid.style.display = 'grid';
-    if (noProducts) noProducts.style.display = 'none';
-    
-    productsGrid.innerHTML = products.map(product => createProductCard(product)).join('');
+    refreshCatalogProducts();
 }
 
 // Helper function to get image source (checks images folder first)
@@ -793,8 +518,23 @@ function getImageSource(imagePath) {
         return null;
     }
     
-    // If it's already a full URL or data URL, use it
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:image')) {
+    // If it's already a data URL, use it
+    if (imagePath.startsWith('data:image')) {
+        return imagePath;
+    }
+
+    // Try to get from embedded images first (for portability)
+    if (typeof getEmbeddedImage === 'function') {
+        // Try with original path, then without images/ prefix
+        let embedded = getEmbeddedImage(imagePath);
+        if (!embedded && imagePath.startsWith('images/')) {
+            embedded = getEmbeddedImage(imagePath.replace(/^images\//, ''));
+        }
+        if (embedded) return embedded;
+    }
+    
+    // If it's already a full URL, use it
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         return imagePath;
     }
     
@@ -827,8 +567,16 @@ function getImageSource(imagePath) {
 function createProductCard(product) {
     if (!product) return '';
     
+    // Fallback logic for image: check product.image first, then first flavor's image
+    let productImg = product.image;
+    if (!productImg || productImg.trim() === '') {
+        if (product.flavors && Array.isArray(product.flavors) && product.flavors.length > 0 && product.flavors[0].image) {
+            productImg = product.flavors[0].image;
+        }
+    }
+    
     // Get image source - checks images folder first, then base64, then external URLs
-    const imageSrc = getImageSource(product.image);
+    const imageSrc = getImageSource(productImg);
     const hasImage = imageSrc !== null && imageSrc.trim() !== '';
     
     // Escape HTML to prevent XSS
@@ -849,68 +597,152 @@ function createProductCard(product) {
     
     // Enhanced image display with proper sizing
     const imageDisplay = hasImage 
-        ? `<div class="product-image-container-full">
-             <img src="${imageSrc}" 
-                  alt="${productName}" 
-                  class="product-image-full" 
-                  loading="lazy"
-                  onload="this.classList.add('loaded'); this.parentElement.querySelector('.image-loader-full')?.remove();"
-                  onerror="this.onerror=null; this.style.display='none'; const placeholder = this.parentElement.querySelector('.product-image-placeholder-full'); if (placeholder) { placeholder.style.display='flex'; } else { this.parentElement.innerHTML='<div class=\\'product-image-placeholder-full\\'><i class=\\'fas fa-image\\'></i><span>Image Not Found</span></div>'; }">
-             <div class="image-loader-full">
-               <i class="fas fa-spinner fa-spin"></i>
-             </div>
-             <div class="product-image-placeholder-full" style="display: none;">
-               <i class="fas fa-image"></i>
-               <span>Image Not Found</span>
-             </div>
+        ? `<div class="product-card-media">
+                <img src="${imageSrc}" 
+                    alt="${productName}" 
+                    class="product-card-image" 
+                    loading="lazy"
+                    onload="this.classList.add('loaded'); this.parentElement.querySelector('.image-loader-full')?.remove();"
+                    onerror="this.onerror=null; this.style.display='none'; const placeholder = this.parentElement.querySelector('.product-image-placeholder-full'); if (placeholder) { placeholder.style.display='flex'; } else { this.parentElement.innerHTML='<div class=\\'product-image-placeholder-full\\'><i class=\\'fas fa-image\\'></i><span>Image Not Found</span></div>'; }">
+                <div class="image-loader-full">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div class="product-image-placeholder-full" style="display: none;">
+                    <i class="fas fa-image"></i>
+                    <span>Image Not Found</span>
+                </div>
            </div>`
-        : `<div class="product-image-placeholder-full">
-             <i class="fas fa-image"></i>
-             <span>No Image</span>
-             <small>Upload in Admin</small>
+        : `<div class="product-card-media">
+                <div class="product-image-placeholder-full">
+                    <i class="fas fa-image"></i>
+                    <span>No Image</span>
+                    <small>Upload in Admin</small>
+                </div>
            </div>`;
     
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const isLoggedIn = !!currentUser;
     return `
-        <div class="product-card-full" data-product-id="${productId}">
-            <div class="product-image-wrapper-full">
-                ${imageDisplay}
-                ${isInStock ? '<div class="stock-badge"><i class="fas fa-check-circle"></i> In Stock</div>' : '<div class="stock-badge out-of-stock"><i class="fas fa-times-circle"></i> Out of Stock</div>'}
+        <article class="product-card-showcase hover-lift" data-product-id="${productId}" onclick="if(!event.target.closest('.card-btn')) viewProduct('${productId}')" style="cursor: pointer;">
+            ${imageDisplay}
+            <div class="product-card-stock ${isInStock ? 'in-stock' : 'out-of-stock'}">
+                <i class="fas fa-${isInStock ? 'check' : 'times'}-circle"></i> ${isInStock ? 'In stock' : 'Out of stock'}
             </div>
-            <div class="product-info-full">
-                <div class="product-header-full">
-                    <h3 class="product-name-full">${productName}</h3>
-                    <div class="product-price-full">
-                        <span class="price-amount">--</span>
-                    </div>
-                </div>
-                <div class="product-meta-full">
-                    <div class="meta-item">
-                        <i class="fas fa-tag"></i>
-                        <span>${productBrand || 'No Brand'}</span>
-                    </div>
-                    <div class="meta-item">
-                        <i class="fas fa-palette"></i>
-                        <span>${productFlavor || 'No Flavor'}</span>
-                    </div>
-                    ${productStock > 0 ? `<div class="meta-item">
-                        <i class="fas fa-box"></i>
-                        <span>${productStock} in stock</span>
-                    </div>` : ''}
-                </div>
-                <div class="product-actions-full">
-                    <button class="btn-view-full" onclick="viewProduct('${productId}')" title="View Details">
-                        <i class="fas fa-eye"></i>
-                        <span>View</span>
-                    </button>
-                    <button class="btn-add-cart-full coming-soon-btn" onclick="addToCart('${productId}')" title="Coming Soon - Add to Cart">
-                        <i class="fas fa-cart-plus"></i>
-                        <span>Coming Soon</span>
+            <div class="product-card-body">
+                <div class="product-card-top">
+                    <span class="brand-pill">${productBrand || 'No Brand'}</span>
+                    <button class="card-btn ghost" onclick="event.stopPropagation(); viewProduct('${productId}')">
+                        <span>View</span> <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
+                <h3 class="product-card-title">${productName}</h3>
+                <p class="product-card-flavor">${productFlavor || 'Multi flavor pack'}</p>
+                <div class="product-card-footer">
+                    ${isLoggedIn ? `
+                        <div class="product-card-price">$${productPrice}</div>
+                    ` : `
+                        <div class="product-card-login"><i class="fas fa-lock"></i> Login to view prices</div>
+                    `}
+                    <div class="product-card-actions">
+                        <button class="card-btn primary" onclick="event.stopPropagation(); quickOrder('${productId}')">
+                            <i class="fas fa-cart-plus"></i> Quick order
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
+        </article>
     `;
 }
+
+// Helpers for catalog filtering and rendering
+function getFeaturedProductIds() {
+    return (JSON.parse(localStorage.getItem('featuredProducts') || '[]') || []).filter(id => id && String(id).trim() !== '');
+}
+
+function getAllCatalogProducts() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+}
+
+function getCatalogFilters() {
+    const searchInput = document.getElementById('catalogSearch');
+    const featuredToggle = document.getElementById('featuredToggle');
+    return {
+        search: (searchInput?.value || '').trim().toLowerCase(),
+        featuredOnly: featuredToggle ? featuredToggle.checked : false,
+        brand: window.currentBrandFilter
+    };
+}
+
+function refreshCatalogProducts() {
+    const products = getAllCatalogProducts();
+    const featuredIds = getFeaturedProductIds();
+    const { search, featuredOnly, brand } = getCatalogFilters();
+
+    let filtered = products.slice();
+
+    if (brand) {
+        filtered = filtered.filter(p => (p.brand || '').toLowerCase().trim() === brand.toLowerCase().trim());
+    }
+
+    if (featuredOnly) {
+        filtered = filtered.filter(p => featuredIds.includes(String(p.id)));
+    }
+
+    if (search) {
+        filtered = filtered.filter(p => {
+            const haystack = `${p.name || ''} ${p.brand || ''} ${p.flavor || ''}`.toLowerCase();
+            return haystack.includes(search);
+        });
+    }
+
+    displayFilteredProducts(filtered);
+
+    const productsTitle = document.getElementById('productsTitle');
+    const productsSubtitle = document.getElementById('productsSubtitle');
+    const clearFilterBtn = document.getElementById('clearBrandFilter');
+    const allBrandsChip = document.getElementById('allBrandsChip');
+
+    if (productsTitle) {
+        const safeBrand = brand ? String(brand).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        const prefix = brand ? `<i class="fas fa-tag"></i> ${safeBrand} Products` : 'All Products';
+        productsTitle.innerHTML = prefix;
+    }
+
+    if (productsSubtitle) {
+        let subtitle = `Showing ${filtered.length} item${filtered.length === 1 ? '' : 's'}`;
+        if (featuredOnly) subtitle += ' • Featured only';
+        if (search) subtitle += ` • Matching "${search}"`;
+        productsSubtitle.textContent = subtitle;
+    }
+
+    if (clearFilterBtn) {
+        clearFilterBtn.style.display = brand ? 'flex' : (search || featuredOnly ? 'flex' : 'none');
+    }
+
+    if (allBrandsChip) {
+        if (brand) {
+            allBrandsChip.classList.remove('active');
+        } else {
+            allBrandsChip.classList.add('active');
+        }
+    }
+
+    updateBrandCardsActiveState();
+}
+window.refreshCatalogProducts = refreshCatalogProducts;
+
+function handleCatalogSearch(event) {
+    if (event && event.preventDefault) {
+        event.preventDefault();
+    }
+    refreshCatalogProducts();
+}
+window.handleCatalogSearch = handleCatalogSearch;
+
+function handleFeaturedToggle() {
+    refreshCatalogProducts();
+}
+window.handleFeaturedToggle = handleFeaturedToggle;
 
 // Initialize home page
 function initializeHomePage() {
@@ -1087,38 +919,32 @@ function loadProductDetail(productId) {
             return;
         }
         
-        // Escape HTML to prevent XSS
         const escapeHtml = (text) => {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         };
-        
-        const productName = escapeHtml(product.name || 'Unnamed Product');
-        const productBrand = escapeHtml(product.brand || '');
-        const productFlavor = escapeHtml(product.flavor || '');
-        const productDescription = escapeHtml(product.description || 'No description available.');
+        const productName = escapeHtml(product.name || '');
         const productPrice = parseFloat(product.price || 0).toFixed(2);
-        const productStock = parseInt(product.stock || 0);
-        const productStatus = escapeHtml(product.status || 'Available');
-        
-        // Get flavors array (new) or fallback to single flavor (backward compatibility)
         const flavors = product.flavors && Array.isArray(product.flavors) && product.flavors.length > 0 
             ? product.flavors 
-            : (product.flavor ? [{ name: product.flavor, image: product.image || '' }] : []);
-        
-        // Determine initial main image - use selected flavor image or product image
+            : (product.flavor ? [{ name: product.flavor }] : []);
         let initialMainImage = product.image || '';
         if (flavors.length > 0 && flavors[0].image) {
             initialMainImage = flavors[0].image;
         }
-        
-        const images = [initialMainImage, ...(product.additionalImages || [])].filter(img => img && img.trim() !== '');
+        const images = [initialMainImage, ...(product.additionalImages || []), ...(product.images || [])].filter(img => img && img.trim() !== '');
         const mainImage = images[0] ? getImageSource(images[0]) : '';
-        const thumbnails = images.slice(0, 5);
-        
+        const thumbnails = images.slice(0, 6).map((img, index) => {
+            const imgSrc = getImageSource(img);
+            return imgSrc ? `
+                <button class="detail-thumb thumbnail-item ${index === 0 ? 'active' : ''}" type="button" onclick="changeMainImage('${imgSrc}', this)">
+                    <img src="${imgSrc}" alt="Thumbnail ${index + 1}" onerror="this.style.display='none';">
+                </button>
+            ` : '';
+        }).join('');
         const imageDisplay = mainImage 
-            ? `<img src="${mainImage}" alt="${productName}" class="main-image" id="mainImage" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            ? `<img src="${mainImage}" alt="${productName}" id="mainImage" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';"> 
                <div class="product-image-placeholder-full" style="display: none;">
                    <i class="fas fa-image"></i>
                    <span>Image Not Found</span>
@@ -1127,110 +953,98 @@ function loadProductDetail(productId) {
                    <i class="fas fa-image"></i>
                    <span>No Image Available</span>
                </div>`;
-        
-        // Build flavor selection UI
-        let flavorSelectionHTML = '';
-        if (flavors.length > 1) {
-            flavorSelectionHTML = `
-                <div class="flavor-selection-section">
-                    <h3><i class="fas fa-palette"></i> Select Flavor</h3>
-                    <div class="flavors-grid" id="flavorsGrid">
-                        ${flavors.map((flavor, index) => {
-                            const flavorName = escapeHtml(flavor.name || '');
-                            const flavorImage = flavor.image ? getImageSource(flavor.image) : '';
-                            const isSelected = index === 0 ? 'selected' : '';
-                            return `
-                                <div class="flavor-option ${isSelected}" 
-                                     data-flavor-name="${flavorName}" 
-                                     data-flavor-image="${flavorImage}"
-                                     onclick="selectFlavor('${flavorName}', '${flavorImage}', this)">
-                                    ${flavorImage ? `
-                                        <img src="${flavorImage}" alt="${flavorName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                        <div class="flavor-image-placeholder" style="display: none;">
-                                            <i class="fas fa-image"></i>
-                                        </div>
-                                    ` : `
-                                        <div class="flavor-image-placeholder">
-                                            <i class="fas fa-image"></i>
-                                        </div>
-                                    `}
-                                    <span class="flavor-name">${flavorName}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        } else if (flavors.length === 1) {
-            // Single flavor - just show it
-            flavorSelectionHTML = `
-                <div class="flavor-selection-section">
-                    <h3><i class="fas fa-palette"></i> Flavor</h3>
-                    <div class="single-flavor-display">
-                        <span class="flavor-badge">${escapeHtml(flavors[0].name)}</span>
-                    </div>
-                </div>
-            `;
-        }
+        const currentUser = getCurrentUser();
+        const isLoggedIn = !!currentUser;
+        const productBrand = escapeHtml(product.brand || '');
+        const productDescription = escapeHtml(product.description || '');
+        const productSpecs = product.specs || [];
+        const stockStatus = product.stock > 0 && product.status === 'available';
         
         container.innerHTML = `
-            <div class="product-detail-images">
-                ${imageDisplay}
-                <div class="thumbnail-images">
-                    ${thumbnails.map((img, index) => {
-                        const imgSrc = getImageSource(img);
-                        return imgSrc ? `
-                            <img src="${imgSrc}" alt="Thumbnail ${index + 1}" 
-                                 onclick="changeMainImage('${imgSrc}')" 
-                                 class="${index === 0 ? 'active' : ''}"
-                                 onerror="this.style.display='none';">
-                        ` : '';
-                    }).join('')}
-                </div>
-            </div>
-            <div class="product-detail-info">
-                <h1>${productName}</h1>
-                <div class="product-detail-price">
-                    <span>--</span>
-                </div>
-                <div class="product-detail-meta">
-                    <p><strong>Brand:</strong> ${productBrand || 'N/A'}</p>
-                    ${flavors.length > 0 ? `<p><strong>Available Flavors:</strong> ${flavors.map(f => escapeHtml(f.name)).join(', ')}</p>` : ''}
-                    <p><strong>Status:</strong> ${productStatus}</p>
-                    <p><strong>Stock:</strong> ${productStock} available</p>
-                </div>
-                ${flavorSelectionHTML}
-                <div class="product-detail-description">
-                    <h3>Description</h3>
-                    <p>${productDescription}</p>
-                </div>
-                ${product.specs && Array.isArray(product.specs) && product.specs.length > 0 ? `
-                    <div class="product-specs">
-                        <h3>Specifications</h3>
-                        <ul>
-                            ${product.specs.map(spec => `<li>${escapeHtml(spec)}</li>`).join('')}
-                        </ul>
+            <div class="detail-layout">
+                <aside class="detail-gallery">
+                    <div class="detail-main-image">
+                        ${imageDisplay}
                     </div>
-                ` : ''}
-                <div class="detail-actions">
-                    <div class="quantity-selector">
-                        <button onclick="decreaseQuantity()" aria-label="Decrease quantity">-</button>
-                        <input type="number" id="productQuantity" value="1" min="1" max="${productStock || 99}">
-                        <button onclick="increaseQuantity()" aria-label="Increase quantity">+</button>
+                    ${thumbnails ? `<div class="detail-thumbs">${thumbnails}</div>` : ''}
+                </aside>
+
+                <section class="detail-info">
+                    <div class="detail-badge-row">
+                        ${productBrand ? `<span class="badge-soft">${productBrand}</span>` : ''}
+                        <span class="badge-success">${stockStatus ? 'In Stock' : 'Out of Stock'}</span>
                     </div>
-                    <button class="btn-add-cart" onclick="addToCartFromDetail('${productId}')" ${productStock <= 0 ? 'disabled' : ''}>
-                        <i class="fas fa-cart-plus"></i> Add to Cart
-                    </button>
-                </div>
+
+                    <h1 class="detail-title">${productName}</h1>
+
+                    ${isLoggedIn ? `
+                        <div class="detail-price-row">
+                            <div class="detail-price-main">$${productPrice}</div>
+                            <div class="detail-price-note">Per 5-pack (wholesale style demo)</div>
+                        </div>
+                    ` : `
+                        <div class="login-prompt detail-login">
+                            <i class="fas fa-lock"></i>
+                            <span>Login to view prices</span>
+                        </div>
+                    `}
+
+                    ${productDescription ? `
+                        <div>
+                            <div class="detail-section-title">Description</div>
+                            <p class="detail-description">${productDescription}</p>
+                        </div>
+                    ` : ''}
+
+                    ${productSpecs.length > 0 ? `
+                        <div>
+                            <div class="detail-section-title">Key Specs</div>
+                            <ul class="detail-specs">
+                                ${productSpecs.map(spec => `<li>${escapeHtml(spec)}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    ${flavors.length > 0 ? `
+                        <div>
+                            <div class="detail-section-title">Flavors / Variants</div>
+                            <div class="variant-grid">
+                                ${flavors.map(f => {
+                                    const fname = escapeHtml(f.name || '');
+                                    const slug = (f.name || '').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+                                    return `
+                                        <article class="variant-card">
+                                            <div class="variant-name">${fname}</div>
+                                            <div class="variant-qty-row">
+                                                <div class="qty-control">
+                                                    <button type="button" onclick="handleFlavorQty('${productId}','${slug}',-1)">-</button>
+                                                    <input type="number" id="qty-${productId}-${slug}" value="0" min="0" class="qty-input" readonly>
+                                                    <button type="button" onclick="handleFlavorQty('${productId}','${slug}',1)">+</button>
+                                                </div>
+                                                <span class="badge-soft badge-small">Case qty</span>
+                                            </div>
+                                        </article>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="detail-actions">
+                        <button class="btn-primary" type="button" onclick="addAllFlavorsToCart('${productId}')">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Add to Cart</span>
+                        </button>
+                        <button class="btn-secondary" type="button" onclick="window.location.href='cart.html'">
+                            <span>View Cart</span>
+                        </button>
+                    </div>
+
+                    <p class="link-muted detail-note">Wholesale-style demo only — no live payments are processed.</p>
+                </section>
             </div>
         `;
-        
-        // Store selected flavor in a hidden input for cart
-        const selectedFlavorInput = document.createElement('input');
-        selectedFlavorInput.type = 'hidden';
-        selectedFlavorInput.id = 'selectedFlavor';
-        selectedFlavorInput.value = flavors.length > 0 ? flavors[0].name : '';
-        container.querySelector('.product-detail-info').appendChild(selectedFlavorInput);
+        window.currentDetailFlavors = (flavors || []).map(f => f.name);
     } catch (error) {
         console.error('Error loading product detail:', error);
         const container = document.getElementById('productDetailContainer');
@@ -1240,10 +1054,66 @@ function loadProductDetail(productId) {
     }
 }
 
-function changeMainImage(imageSrc) {
+function changeMainImage(imageSrc, element) {
+    try {
+        const mainImg = document.getElementById('mainImage');
+        if (mainImg && imageSrc) {
+            mainImg.src = imageSrc;
+        }
+        // Update active thumbnail
+        if (element) {
+            document.querySelectorAll('.thumbnail-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        }
+    } catch (error) {
+        console.error('Error changing main image:', error);
+    }
+}
+
+function addAllFlavorsToCart(productId) {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+        alert('Please login to add items to cart.');
+        return;
+    }
+
+    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    const product = products.find(p => String(p.id) === String(productId));
+    if (!product) return;
+
+    const flavors = product.flavors && Array.isArray(product.flavors) && product.flavors.length > 0
+        ? product.flavors
+        : (product.flavor ? [{ name: product.flavor }] : []);
+
+    let addedCount = 0;
+    flavors.forEach(f => {
+        const fname = f.name || '';
+        const slug = fname.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const qtyInput = document.getElementById(`qty-${productId}-${slug}`);
+        if (qtyInput) {
+            const qty = parseInt(qtyInput.value) || 0;
+            if (qty > 0) {
+                // Use the internal cart helper directly with flavor name
+                addToCartWithQuantity(productId, qty, fname);
+                addedCount++;
+            }
+        }
+    });
+
+    if (addedCount > 0) {
+        alert(`✅ Added ${addedCount} flavor(s) to cart!`);
+        updateCartCount();
+    } else {
+        alert('Please select quantities for flavors first.');
+    }
+}
+
+// Legacy function for backward compatibility  
+function changeMainImage_old(imageSrc) {
     try {
         const mainImage = document.getElementById('mainImage');
-        const thumbnails = document.querySelectorAll('.thumbnail-images img');
         
         if (mainImage && imageSrc) {
             mainImage.src = imageSrc;
@@ -1257,13 +1127,31 @@ function changeMainImage(imageSrc) {
             };
         }
         
-        thumbnails.forEach(thumb => {
-            thumb.classList.remove('active');
-            const onclickAttr = thumb.getAttribute('onclick') || '';
-            if (thumb.src === imageSrc || onclickAttr.includes(imageSrc)) {
-                thumb.classList.add('active');
-            }
-        });
+        // Update active thumbnail
+        if (element) {
+            document.querySelectorAll('.thumbnail-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        } else {
+            // Fallback: find thumbnail by data-image attribute or old class structure
+            document.querySelectorAll('.thumbnail-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-image') === imageSrc) {
+                    item.classList.add('active');
+                }
+            });
+            // Also handle old structure
+            const thumbnails = document.querySelectorAll('.thumbnail-images img');
+            thumbnails.forEach(thumb => {
+                thumb.classList.remove('active');
+                const wrapper = thumb.parentElement;
+                const onclickAttr = wrapper ? (wrapper.getAttribute('onclick') || '') : '';
+                if (thumb.src === imageSrc || onclickAttr.includes(imageSrc)) {
+                    thumb.classList.add('active');
+                }
+            });
+        }
     } catch (error) {
         console.error('Error changing main image:', error);
     }
@@ -1381,31 +1269,38 @@ function showComingSoonNotification(message = 'Shopping Cart feature is coming s
 
 // Cart functions
 function addToCart(productId) {
-    // Coming Soon feature
-    showComingSoonNotification('Shopping Cart feature is coming soon! Stay tuned for updates.');
-    return;
-    
-    // This function is called from product cards
-    // addToCartWithQuantity(productId, 1);
+    try {
+        // Default quantity 1, no specific flavor (cart UI can adjust later)
+        addToCartWithQuantity(productId, 1, '');
+    } catch (error) {
+        console.error('Error in addToCart:', error);
+        alert('Error adding product to cart. Please try again.');
+    }
 }
 
 function addToCartFromDetail(productId) {
-    // Coming Soon feature
-    showComingSoonNotification('Shopping Cart feature is coming soon! Stay tuned for updates.');
-    return;
-    
-    // This function is called from product detail page
-    // const qtyInput = document.getElementById('productQuantity');
-    // const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
-    // const selectedFlavorInput = document.getElementById('selectedFlavor');
-    // const selectedFlavor = selectedFlavorInput ? selectedFlavorInput.value : '';
-    // addToCartWithQuantity(productId, quantity, selectedFlavor);
+    try {
+        const qtyInput = document.getElementById('productQuantity');
+        const quantity = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+        const selectedFlavorInput = document.getElementById('selectedFlavor');
+        const selectedFlavor = selectedFlavorInput ? selectedFlavorInput.value : '';
+        addToCartWithQuantity(productId, quantity, selectedFlavor);
+    } catch (error) {
+        console.error('Error in addToCartFromDetail:', error);
+        alert('Error adding product to cart. Please try again.');
+    }
 }
 
 // Make functions globally available
 window.addToCart = addToCart;
 window.addToCartFromDetail = addToCartFromDetail;
 window.showComingSoonNotification = showComingSoonNotification;
+
+// Quick Order: navigate to product detail for fast checkout flow
+function quickOrder(productId) {
+    viewProduct(productId);
+}
+window.quickOrder = quickOrder;
 
 // Flavor selection function
 function selectFlavor(flavorName, flavorImage, element) {
@@ -1538,6 +1433,27 @@ function addToCartWithQuantity(productId, quantity, selectedFlavor = '') {
     }
 }
 
+// Handle quantity changes for individual flavors on the product detail page
+function handleFlavorQty(productId, slug, change) {
+    try {
+        const input = document.getElementById(`qty-${productId}-${slug}`);
+        if (!input) return;
+
+        let current = parseInt(input.value, 10);
+        if (isNaN(current)) current = 0;
+
+        let next = current + change;
+        if (next < 0) next = 0;
+
+        input.value = next;
+    } catch (error) {
+        console.error('Error updating flavor quantity:', error);
+    }
+}
+
+// Make flavor quantity handler available for inline onclick
+window.handleFlavorQty = handleFlavorQty;
+
 function updateCartCount() {
     try {
         const cart = JSON.parse(localStorage.getItem(STORAGE_KEYS.CART) || '[]');
@@ -1561,6 +1477,8 @@ function loadCart() {
         const cart = JSON.parse(localStorage.getItem(STORAGE_KEYS.CART) || '[]');
         const cartItems = document.getElementById('cartItems');
         const emptyCart = document.getElementById('emptyCart');
+        const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        const isLoggedIn = !!currentUser;
         
         if (!cartItems) return;
         
@@ -1591,6 +1509,7 @@ function loadCart() {
             const itemImage = getImageSource(item.image) || '';
             
             const selectedFlavor = item.selectedFlavor || item.flavor || '';
+            const lineTotal = (parseFloat(item.price || 0) * itemQuantity).toFixed(2);
             return `
                 <div class="cart-item">
                     ${itemImage ? `<img src="${itemImage}" alt="${itemName}" class="cart-item-image" onerror="this.onerror=null; this.src=''; this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -1604,7 +1523,12 @@ function loadCart() {
                     <div class="cart-item-info">
                         <h3 class="cart-item-name">${itemName}</h3>
                         <p class="cart-item-meta">Brand: ${itemBrand || 'N/A'}${selectedFlavor ? ` | Flavor: ${escapeHtml(selectedFlavor)}` : ''}</p>
-                        <p class="cart-item-price">--</p>
+                        ${isLoggedIn ? `<p class="cart-item-price">$${lineTotal}</p>` : `
+                            <div style="display:flex; align-items:center; gap:8px; justify-self:end;">
+                                <span style="width:12px; height:12px; border-left:3px solid #ef4444;"></span>
+                                <span style="color:#ef4444; font-weight:700; font-size:12px; text-transform:uppercase;">Login to view prices</span>
+                            </div>
+                        `}
                         <div class="cart-item-actions">
                             <div class="quantity-selector">
                                 <button onclick="updateCartQuantity('${itemId}', -1)" aria-label="Decrease quantity">-</button>
@@ -1715,6 +1639,8 @@ function updateOrderSummary(subtotal) {
         const tax = subtotalValue * 0.1;
         const shipping = subtotalValue > 0 ? 10 : 0;
         const total = subtotalValue + tax + shipping;
+        const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        const isLoggedIn = !!currentUser;
         
         const subtotalEl = document.getElementById('subtotal');
         const taxEl = document.getElementById('tax');
@@ -1722,11 +1648,18 @@ function updateOrderSummary(subtotal) {
         const totalEl = document.getElementById('total');
         const checkoutBtn = document.getElementById('checkoutBtn');
         
-        if (subtotalEl) subtotalEl.textContent = '--';
-        if (taxEl) taxEl.textContent = '--';
-        if (shippingEl) shippingEl.textContent = '--';
-        if (totalEl) totalEl.textContent = '--';
-        if (checkoutBtn) checkoutBtn.disabled = subtotalValue === 0;
+        if (isLoggedIn) {
+            if (subtotalEl) subtotalEl.textContent = `$${subtotalValue.toFixed(2)}`;
+            if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
+            if (shippingEl) shippingEl.textContent = `$${shipping.toFixed(2)}`;
+            if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+        } else {
+            if (subtotalEl) subtotalEl.textContent = '--';
+            if (taxEl) taxEl.textContent = '--';
+            if (shippingEl) shippingEl.textContent = '--';
+            if (totalEl) totalEl.textContent = '--';
+        }
+        if (checkoutBtn) checkoutBtn.disabled = subtotalValue === 0 || !isLoggedIn;
     } catch (error) {
         console.error('Error updating order summary:', error);
     }
@@ -1758,17 +1691,35 @@ function loadSideViewers() {
     const featured = products.slice(0, 3);
     const newArrivals = products.slice(-3);
     
-    leftViewer.innerHTML = featured.map(product => `
-        <div class="viewer-item" onclick="viewProduct('${product.id}')">
-            <img src="${product.image}" alt="${product.name}">
-        </div>
-    `).join('');
+    leftViewer.innerHTML = featured.map(product => {
+        let productImg = product.image;
+        if (!productImg || productImg.trim() === '') {
+            if (product.flavors && product.flavors.length > 0 && product.flavors[0].image) {
+                productImg = product.flavors[0].image;
+            }
+        }
+        const imageSrc = getImageSource(productImg);
+        return `
+            <div class="viewer-item" onclick="viewProduct('${product.id}')">
+                <img src="${imageSrc || ''}" alt="${product.name}" onerror="this.style.display='none';">
+            </div>
+        `;
+    }).join('');
     
-    rightViewer.innerHTML = newArrivals.map(product => `
-        <div class="viewer-item" onclick="viewProduct('${product.id}')">
-            <img src="${product.image}" alt="${product.name}">
-        </div>
-    `).join('');
+    rightViewer.innerHTML = newArrivals.map(product => {
+        let productImg = product.image;
+        if (!productImg || productImg.trim() === '') {
+            if (product.flavors && product.flavors.length > 0 && product.flavors[0].image) {
+                productImg = product.flavors[0].image;
+            }
+        }
+        const imageSrc = getImageSource(productImg);
+        return `
+            <div class="viewer-item" onclick="viewProduct('${product.id}')">
+                <img src="${imageSrc || ''}" alt="${product.name}" onerror="this.style.display='none';">
+            </div>
+        `;
+    }).join('');
 }
 
 // Initialize page
@@ -1806,4 +1757,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-

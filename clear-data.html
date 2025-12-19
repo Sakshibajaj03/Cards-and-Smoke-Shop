@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Website Local Storage</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 { color: #1f2937; margin-bottom: 1rem; }
+        p { color: #4b5563; line-height: 1.5; margin-bottom: 2rem; }
+        .warning {
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+        button {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .success {
+            display: none;
+            color: #065f46;
+            background-color: #ecfdf5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wipe Local Data</h1>
+        <div class="warning">
+            ⚠️ This will PERMANENTLY delete all products, flavors, brands, cart data, and settings stored in this browser.
+        </div>
+        <p>Use this tool if you need to completely reset your local development database.</p>
+        <button onclick="clearEverything()">Nuke Local Storage</button>
+        <div id="success" class="success">
+            ✅ All data has been cleared! You can now close this tab.
+        </div>
+    </div>
+
+    <script>
+        function clearEverything() {
+            if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+            
+            try {
+                // Clear all keys found in the project
+                const keys = [
+                    'products', 'brands', 'flavors', 'brandFlavors', 
+                    'brandSubBrands', 'featuredProducts', 'cart', 
+                    'sliderImages', 'storeName', 'users', 'currentUser', 
+                    'productViewMode', 'version', 'isLoggedIn', 
+                    'dataManuallyCleared', 'lastViewedBrand', 'store_config'
+                ];
+                
+                keys.forEach(k => localStorage.removeItem(k));
+                
+                // Set the flag to prevent auto-reinitialization if the user visits the site again
+                localStorage.setItem('dataManuallyCleared', 'true');
+                
+                // Visual feedback
+                document.getElementById('success').style.display = 'block';
+                document.querySelector('button').style.display = 'none';
+                
+                console.log('Local storage cleared successfully.');
+            } catch (e) {
+                alert('Error clearing storage: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
+
+

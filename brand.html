@@ -11,6 +11,8 @@
     <title>Brand Products - Premium Store</title>
     <link rel="stylesheet" href="styles.css?v=1.0.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="products-data.js?v=1.0.0"></script>
+    <script src="embedded-images.js?v=1.0.0"></script>
     <script src="cache-buster.js?v=1.0.0"></script>
 </head>
 <body class="light-colorful-theme">
@@ -297,7 +299,15 @@
         function createBrandProductCard(product) {
             if (!product) return '';
             
-            const imageSrc = getImageSource(product.image);
+            // Fallback logic for image
+            let productImg = product.image;
+            if (!productImg || productImg.trim() === '') {
+                if (product.flavors && Array.isArray(product.flavors) && product.flavors.length > 0 && product.flavors[0].image) {
+                    productImg = product.flavors[0].image;
+                }
+            }
+            
+            const imageSrc = getImageSource(productImg);
             const hasImage = imageSrc !== null && imageSrc.trim() !== '';
             
             const escapeHtml = (text) => {

@@ -12,10 +12,11 @@
     <link rel="stylesheet" href="styles.css?v=1.0.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="slider-data.js?v=1.0.0"></script>
+    <script src="products-data.js?v=1.0.0"></script>
     <script src="embedded-images.js?v=1.0.0"></script>
     <script src="cache-buster.js?v=1.0.0"></script>
 </head>
-<body class="light-colorful-theme">
+<body class="light-colorful-theme catalog-theme">
     <!-- Top Info Bar -->
     <div class="top-info-bar">
         <div class="container">
@@ -26,7 +27,11 @@
                     <span><i class="fas fa-map-marker-alt"></i> Free Shipping Over $50</span>
                 </div>
                 <div class="top-info-right">
-                    <a href="login.html"><i class="fas fa-user-shield"></i> Admin</a>
+                    <div id="accountLinks">
+                        <a href="login.html"><i class="fas fa-user"></i> Login</a>
+                        <span style="margin: 0 8px; color: rgba(255,255,255,0.7)">|</span>
+                        <a href="register.html"><i class="fas fa-user-plus"></i> Register</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -64,12 +69,45 @@
                             <span class="cart-count" id="cartCount" style="display: none;">0</span>
                         </div>
                         <span class="cart-label">Cart</span>
-                        <span class="coming-soon-badge">Coming Soon</span>
+                        <span class="coming-soon-badge animate-pulse">Coming Soon</span>
                     </a>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- Main Navigation -->
+    <nav class="main-nav-bar">
+        <div class="container">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#products" class="nav-link">
+                        <i class="fas fa-shopping-bag"></i> Shop
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#brandsGrid" class="nav-link">
+                        <i class="fas fa-tags"></i> Brands
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-info-circle"></i> About Us
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#newsletter" class="nav-link">
+                        <i class="fas fa-envelope"></i> Contact
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
 
     <!-- Image Slider Section -->
     <section class="image-slider-section">
@@ -94,16 +132,36 @@
     <!-- Main Content -->
     <main class="main-content-wrapper">
         <div class="container">
-            <!-- Brands Section -->
-            <section class="content-section-full brands-section-modern">
-                <div class="section-header-modern-full">
+            <!-- Catalog Hero & Filters -->
+            <section class="catalog-hero">
+                <div class="section-header-modern-full catalog-hero-head">
+                    <div class="eyebrow-badge"><i class="fas fa-bolt"></i> Live catalog</div>
                     <div>
-                        <h2><i class="fas fa-tags"></i> Shop by Brand</h2>
-                        <p>Explore products by your favorite brands</p>
+                        <h2><i class="fas fa-box-open"></i> Curated Wholesale Catalog</h2>
+                        <p>Browse products by brand, flavor, or featured picks in a warehouse-style layout that matches our theme.</p>
                     </div>
                 </div>
-                <div class="brands-grid-modern" id="brandsGrid">
-                    <!-- Brands will be loaded dynamically from localStorage -->
+
+                <div class="catalog-controls">
+                    <div class="catalog-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="catalogSearch" placeholder="Search by name, brand, or flavor" oninput="handleCatalogSearch(event)">
+                    </div>
+                    <label class="pill-toggle">
+                        <input type="checkbox" id="featuredToggle" onchange="handleFeaturedToggle(this.checked)">
+                        <span class="toggle-pill"></span>
+                        <span class="toggle-label">Featured only</span>
+                    </label>
+                </div>
+
+                <div class="catalog-brand-row">
+                    <button id="allBrandsChip" class="brand-chip active" onclick="clearBrandFilter()" title="Show all brands">
+                        <span class="brand-chip-icon"><i class="fas fa-globe"></i></span>
+                        <span class="brand-chip-label">All brands</span>
+                    </button>
+                    <div class="brands-grid-modern" id="brandsGrid">
+                        <!-- Brands will be loaded dynamically from localStorage -->
+                    </div>
                 </div>
             </section>
             
@@ -344,21 +402,14 @@
             }
             
             brandsGrid.innerHTML = brands.map(brandObj => {
-                const brand = brandObj.name || brandObj; // Support both formats during transition
-                const subBrands = brandSubBrands[brand] || [];
-                const subBrandsCount = subBrands.length;
+                const brand = brandObj.name || brandObj;
                 const isActive = window.currentBrandFilter === brand;
-                
                 return `
-                    <div class="brand-card-modern ${isActive ? 'brand-active' : ''}" onclick="viewBrand('${brand}')" data-brand="${brand}">
-                        <div class="brand-icon-modern">${brand.charAt(0).toUpperCase()}</div>
-                        <h3>${brand}</h3>
-                        ${subBrandsCount > 0 ? `<p class="brand-subtitle">${subBrandsCount} ${subBrandsCount === 1 ? 'Sub-brand' : 'Sub-brands'}</p>` : ''}
-                        <div class="brand-arrow">
-                            <i class="fas fa-arrow-right"></i>
-                        </div>
-                        ${isActive ? '<div class="brand-active-badge"><i class="fas fa-check"></i> Active</div>' : ''}
-                    </div>
+                    <button class="brand-chip ${isActive ? 'active' : ''}" onclick="viewBrand('${brand}')" data-brand="${brand}" title="View ${brand}">
+                        <span class="brand-chip-icon">${brand.charAt(0).toUpperCase()}</span>
+                        <span class="brand-chip-label">${brand}</span>
+                        ${isActive ? '<span class="brand-chip-active"><i class="fas fa-check"></i></span>' : ''}
+                    </button>
                 `;
             }).join('');
         }
@@ -366,44 +417,14 @@
         
         // Brand filter function - filters products on same page
         function viewBrand(brandName) {
-            // Get all products
-            const products = JSON.parse(localStorage.getItem('products') || '[]');
-            
-            // Filter products by brand (case-insensitive)
-            const filteredProducts = products.filter(product => {
-                const productBrand = (product.brand || '').toUpperCase().trim();
-                const searchBrand = brandName.toUpperCase().trim();
-                return productBrand === searchBrand;
-            });
-            
-            // Display filtered products
-            if (typeof displayFilteredProducts === 'function') {
-                displayFilteredProducts(filteredProducts);
+            window.currentBrandFilter = brandName;
+
+            if (typeof refreshCatalogProducts === 'function') {
+                refreshCatalogProducts();
             } else {
-                // Fallback if function not loaded yet
-                setTimeout(() => viewBrand(brandName), 100);
+                setTimeout(() => viewBrand(brandName), 120);
                 return;
             }
-            
-            // Update section title and subtitle
-            const productsTitle = document.getElementById('productsTitle');
-            const productsSubtitle = document.getElementById('productsSubtitle');
-            const clearFilterBtn = document.getElementById('clearBrandFilter');
-            
-            if (productsTitle) {
-                productsTitle.innerHTML = `<i class="fas fa-tag"></i> ${brandName} Products`;
-            }
-            if (productsSubtitle) {
-                productsSubtitle.textContent = `Showing ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} from ${brandName}`;
-            }
-            if (clearFilterBtn) {
-                clearFilterBtn.style.display = 'flex';
-            }
-            
-            // Store current filter
-            window.currentBrandFilter = brandName;
-            
-            // Update brand cards to show active state
             updateBrandCardsActiveState();
             
             // Scroll to products section smoothly
@@ -417,20 +438,21 @@
         
         // Update brand cards to show which one is active
         function updateBrandCardsActiveState() {
-            const brandCards = document.querySelectorAll('.brand-card-modern');
+            const brandCards = document.querySelectorAll('.brand-chip');
             brandCards.forEach(card => {
+                if (card.id === 'allBrandsChip') return;
                 const brandName = card.getAttribute('data-brand');
                 if (brandName === window.currentBrandFilter) {
-                    card.classList.add('brand-active');
-                    if (!card.querySelector('.brand-active-badge')) {
-                        const badge = document.createElement('div');
-                        badge.className = 'brand-active-badge';
-                        badge.innerHTML = '<i class="fas fa-check"></i> Active';
+                    card.classList.add('active');
+                    if (!card.querySelector('.brand-chip-active')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'brand-chip-active';
+                        badge.innerHTML = '<i class="fas fa-check"></i>';
                         card.appendChild(badge);
                     }
                 } else {
-                    card.classList.remove('brand-active');
-                    const badge = card.querySelector('.brand-active-badge');
+                    card.classList.remove('active');
+                    const badge = card.querySelector('.brand-chip-active');
                     if (badge) badge.remove();
                 }
             });
@@ -440,7 +462,10 @@
         // Clear brand filter function
         function clearBrandFilter() {
             // Reload all products
-            if (typeof loadProducts === 'function') {
+            window.currentBrandFilter = null;
+            if (typeof refreshCatalogProducts === 'function') {
+                refreshCatalogProducts();
+            } else if (typeof loadProducts === 'function') {
                 loadProducts();
             }
             
@@ -458,9 +483,6 @@
             if (clearFilterBtn) {
                 clearFilterBtn.style.display = 'none';
             }
-            
-            // Clear filter
-            window.currentBrandFilter = null;
             
             // Update brand cards to remove active state
             updateBrandCardsActiveState();
@@ -517,6 +539,37 @@
             document.getElementById('storeNameHeader').textContent = storeName;
             const footerStoreName = document.getElementById('footerStoreName');
             if (footerStoreName) footerStoreName.textContent = storeName;
+            
+            // Update account links based on login state
+            function updateAccountLinks() {
+                const container = document.getElementById('accountLinks');
+                if (!container) return;
+                try {
+                    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+                    if (user && user.role === 'admin') {
+                        container.innerHTML = `
+                            <a href="admin.html"><i class="fas fa-user-shield"></i> Admin Panel</a>
+                            <span style="margin: 0 8px; color: rgba(255,255,255,0.7)">|</span>
+                            <a href="#" onclick="logoutUser(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        `;
+                    } else if (user) {
+                        container.innerHTML = `
+                            <span><i class="fas fa-user"></i> Hi, ${user.username}</span>
+                            <span style="margin: 0 8px; color: rgba(255,255,255,0.7)">|</span>
+                            <a href="#" onclick="logoutUser(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        `;
+                    } else {
+                        container.innerHTML = `
+                            <a href="login.html"><i class="fas fa-user"></i> Login</a>
+                            <span style="margin: 0 8px; color: rgba(255,255,255,0.7)">|</span>
+                            <a href="register.html"><i class="fas fa-user-plus"></i> Register</a>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Error updating account links:', e);
+                }
+            }
+            updateAccountLinks();
         });
         
         // Listen for storage changes
@@ -611,13 +664,21 @@
         function handleSearch(event) {
             event.preventDefault();
             const query = document.getElementById('headerSearch').value;
-            const products = JSON.parse(localStorage.getItem('products') || '[]');
-            const filtered = products.filter(p => 
-                p.name.toLowerCase().includes(query.toLowerCase()) ||
-                p.brand.toLowerCase().includes(query.toLowerCase()) ||
-                p.flavor.toLowerCase().includes(query.toLowerCase())
-            );
-            displayFilteredProducts(filtered);
+            const catalogSearch = document.getElementById('catalogSearch');
+            if (catalogSearch) {
+                catalogSearch.value = query;
+            }
+            if (typeof refreshCatalogProducts === 'function') {
+                refreshCatalogProducts();
+            } else {
+                const products = JSON.parse(localStorage.getItem('products') || '[]');
+                const filtered = products.filter(p => 
+                    p.name.toLowerCase().includes(query.toLowerCase()) ||
+                    p.brand.toLowerCase().includes(query.toLowerCase()) ||
+                    p.flavor.toLowerCase().includes(query.toLowerCase())
+                );
+                displayFilteredProducts(filtered);
+            }
             document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -685,3 +746,4 @@
     </script>
 </body>
 </html>
+

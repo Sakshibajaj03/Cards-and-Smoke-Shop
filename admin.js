@@ -1,5 +1,49 @@
 // Admin Panel Functions
 
+// Helper function to resolve image paths (handles embedded images for portability)
+function getImageSource(imagePath) {
+    if (!imagePath || imagePath.trim() === '') {
+        return null;
+    }
+    
+    // If it's already a data URL, use it
+    if (imagePath.startsWith('data:image')) {
+        return imagePath;
+    }
+
+    // Try to get from embedded images first (for portability)
+    if (typeof getEmbeddedImage === 'function') {
+        // Try with original path, then without images/ prefix
+        let embedded = getEmbeddedImage(imagePath);
+        if (!embedded && imagePath.startsWith('images/')) {
+            embedded = getEmbeddedImage(imagePath.replace(/^images\//, ''));
+        }
+        if (embedded) return embedded;
+    }
+    
+    // If it's already a full URL, use it
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath;
+    }
+    
+    // If it's a relative path starting with images/, encode spaces and special characters
+    if (imagePath.startsWith('images/')) {
+        const parts = imagePath.split('/');
+        const encodedParts = parts.map((part, index) => {
+            if (index === 0) return part;
+            return encodeURIComponent(part);
+        });
+        return encodedParts.join('/');
+    }
+    
+    // If it's just a filename, assume it's in images folder
+    if (!imagePath.includes('/')) {
+        return `images/${encodeURIComponent(imagePath)}`;
+    }
+    
+    return imagePath;
+}
+
 // Initialize admin page
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize all data structures for portability
@@ -118,6 +162,31 @@ function showSection(sectionId) {
     // Update page title
     updatePageTitle(sectionId);
     
+    // Load section-specific data
+    if (sectionId === 'brands') {
+        loadBrands();
+        // Update brands stat
+        const brands = getBrands();
+        const totalBrandsStat = document.getElementById('totalBrandsStat');
+        if (totalBrandsStat) {
+            totalBrandsStat.textContent = brands.length;
+        }
+    } else if (sectionId === 'flavors') {
+        loadFlavors();
+        // Update flavors stat
+        const flavors = JSON.parse(localStorage.getItem('flavors') || '[]');
+        const totalFlavorsStat = document.getElementById('totalFlavorsStat');
+        if (totalFlavorsStat) {
+            totalFlavorsStat.textContent = flavors.length;
+        }
+    } else if (sectionId === 'products') {
+        loadProductsAdmin();
+    } else if (sectionId === 'dashboard') {
+        updateDashboardStats();
+    } else if (sectionId === 'featured') {
+        loadFeaturedProducts();
+    }
+    
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -128,7 +197,7 @@ function updatePageTitle(sectionId) {
         'settings': 'Store Settings',
         'slider': 'Slider Images',
         'products': 'Products Management',
-        'brands': 'Brands & Flavors Management',
+        'brands': 'Brands Management',
         'flavors': 'Flavors Management',
         'featured': 'Featured Products',
         'data': 'Data Management'
@@ -1114,7 +1183,7 @@ function loadFeaturedProducts() {
             <div class="featured-slot-content">
                 ${featuredProduct ? `
                     <div class="featured-product-preview">
-                        <img src="${featuredProduct.image || ''}" alt="${featuredProduct.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <img src="${getImageSource(featuredProduct.image) || ''}" alt="${featuredProduct.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="featured-placeholder" style="display: none;">
                             <i class="fas fa-image"></i>
                             <span>No Image</span>
@@ -1160,7 +1229,7 @@ function previewFeaturedProduct(slotIndex, productId) {
     const content = slot.querySelector('.featured-slot-content');
     content.innerHTML = `
         <div class="featured-product-preview">
-            <img src="${product.image || ''}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <img src="${getImageSource(product.image) || ''}" alt="${product.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="featured-placeholder" style="display: none;">
                 <i class="fas fa-image"></i>
                 <span>No Image</span>
@@ -1302,7 +1371,7 @@ function addFlavorField(flavorData = null) {
     flavorDiv.style.cssText = 'margin-bottom: 20px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 12px; background: #f9fafb;';
     
     const flavorName = flavorData ? flavorData.name : '';
-    const flavorImage = flavorData ? flavorData.image : '';
+    const flavorImage = (flavorData && flavorData.image) ? flavorData.image : '';
     
     flavorDiv.innerHTML = `
         <div style="display: flex; gap: 15px; align-items: flex-start; flex-wrap: wrap;">
@@ -1322,12 +1391,17 @@ function addFlavorField(flavorData = null) {
             </div>
             <div style="flex: 1; min-width: 200px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
-                    <i class="fas fa-image"></i> Flavor Image *
+                    <i class="fas fa-image"></i> Flavor Image <small style="color: #6b7280; font-weight: normal;">(Optional)</small>
                 </label>
                 <input type="file" class="form-input flavor-image-input" accept="image/*" 
-                       onchange="previewFlavorImage(this, '${flavorId}')" required>
-                <div class="flavor-image-preview" id="preview_${flavorId}" style="margin-top: 10px;">
-                    ${flavorImage ? `<img src="${flavorImage}" style="max-width: 100px; max-height: 100px; border-radius: 8px; border: 2px solid #e5e7eb;">` : ''}
+                       onchange="previewFlavorImage(this, '${flavorId}')">
+                <div class="flavor-image-preview" id="preview_${flavorId}" style="margin-top: 10px; position: relative; display: inline-block;">
+                    ${flavorImage ? `
+                        <img src="${flavorImage}" style="max-width: 100px; max-height: 100px; border-radius: 8px; border: 2px solid #e5e7eb;">
+                        <button type="button" onclick="removeFlavorImage('${flavorId}')" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Remove Flavor Image">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    ` : ''}
                 </div>
             </div>
             <div style="display: flex; align-items: flex-end;">
@@ -1358,6 +1432,19 @@ function addFlavorField(flavorData = null) {
     });
 }
 
+function removeFlavorImage(flavorId) {
+    const preview = document.getElementById('preview_' + flavorId);
+    if (preview) {
+        preview.innerHTML = '';
+        // Also clear the file input for this flavor
+        const flavorDiv = document.getElementById(flavorId);
+        if (flavorDiv) {
+            const fileInput = flavorDiv.querySelector('.flavor-image-input');
+            if (fileInput) fileInput.value = '';
+        }
+    }
+}
+
 function removeFlavorField(flavorId) {
     const flavorDiv = document.getElementById(flavorId);
     if (flavorDiv) {
@@ -1372,7 +1459,14 @@ function previewFlavorImage(input, containerId) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            preview.innerHTML = `<img src="${e.target.result}" style="max-width: 100px; max-height: 100px; border-radius: 8px; border: 2px solid #e5e7eb;">`;
+            preview.innerHTML = `
+                <div style="position: relative; display: inline-block;">
+                    <img src="${e.target.result}" style="max-width: 100px; max-height: 100px; border-radius: 8px; border: 2px solid #e5e7eb;">
+                    <button type="button" onclick="removeFlavorImage('${containerId}')" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" title="Remove Flavor Image">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
         };
         reader.readAsDataURL(input.files[0]);
     }
@@ -1389,6 +1483,7 @@ function clearFlavorFields() {
 // Make functions globally available
 window.addFlavorField = addFlavorField;
 window.removeFlavorField = removeFlavorField;
+window.removeFlavorImage = removeFlavorImage;
 window.previewFlavorImage = previewFlavorImage;
 
 function loadProductsAdmin() {
@@ -1402,13 +1497,15 @@ function loadProductsAdmin() {
   }
   
     productsList.innerHTML = products.map(product => {
-        const hasImage = product.image && product.image.trim() !== '';
+        let productImg = product.image;
+        if (!productImg || productImg.trim() === '') {
+            if (product.flavors && Array.isArray(product.flavors) && product.flavors.length > 0 && product.flavors[0].image) {
+                productImg = product.flavors[0].image;
+            }
+        }
+        const hasImage = productImg && productImg.trim() !== '';
         const imageDisplay = hasImage 
-            ? `<img src="${product.image}" alt="${product.name}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-               <div style="display: none; width: 120px; height: 120px; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; align-items: center; justify-content: center; color: #9ca3af; flex-direction: column;">
-                 <i class="fas fa-image" style="font-size: 32px; margin-bottom: 8px;"></i>
-                 <span style="font-size: 12px;">Image Error</span>
-               </div>`
+            ? `<img src="${getImageSource(productImg)}" alt="${product.name}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">`
             : `<div style="width: 120px; height: 120px; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #9ca3af; flex-direction: column;">
                  <i class="fas fa-image" style="font-size: 32px; margin-bottom: 8px;"></i>
                  <span style="font-size: 12px; text-align: center;">No Image</span>
@@ -1439,14 +1536,14 @@ function loadProductsAdmin() {
 }
 
 function showAddProductForm() {
-    const formContainer = document.getElementById('productFormContainer');
+    const modalOverlay = document.getElementById('productModal');
     clearFlavorFields();
     addFlavorField(); // Add one empty flavor field by default
     const formTitle = document.getElementById('formTitle');
     const form = document.getElementById('productForm');
     
-    if (formContainer) formContainer.style.display = 'block';
-    if (formTitle) formTitle.textContent = 'Add New Product';
+    if (modalOverlay) modalOverlay.style.display = 'flex';
+    if (formTitle) formTitle.innerHTML = '<i class="fas fa-box"></i> Add New Product';
     if (form) form.reset();
     
     document.getElementById('productId').value = '';
@@ -1462,16 +1559,25 @@ function showAddProductForm() {
     populateBrandAndFlavorSelects();
     clearFlavorFields();
     addFlavorField(); // Add one empty flavor field by default
-    formContainer.scrollIntoView({ behavior: 'smooth' });
+    
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
 }
 
 function hideProductForm() {
-    const formContainer = document.getElementById('productFormContainer');
-    if (formContainer) formContainer.style.display = 'none';
+    const modalOverlay = document.getElementById('productModal');
+    if (modalOverlay) modalOverlay.style.display = 'none';
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
 }
 
 function previewProductImage(input) {
     const file = input.files[0];
+    // Reset remove flag if a new file is selected
+    const removeFlag = document.getElementById('removeMainImage');
+    if (removeFlag) removeFlag.value = 'false';
+    
     if (!file) {
         const preview = document.getElementById('productImagePreview');
         if (preview) preview.innerHTML = '';
@@ -1521,6 +1627,20 @@ function previewProductImage(input) {
     reader.readAsDataURL(file);
 }
 
+function removeProductImage() {
+    if (confirm('Are you sure you want to remove the current product image?')) {
+        document.getElementById('removeMainImage').value = 'true';
+        document.getElementById('productImagePreview').innerHTML = '';
+        // Also reset the file input if any
+        document.getElementById('productImage').value = '';
+        // Show upload hint again
+        const uploadHint = document.querySelector('.upload-hint');
+        if (uploadHint) {
+            uploadHint.style.display = 'block';
+        }
+    }
+}
+
 function previewAdditionalImages(input) {
     const files = input.files;
     const preview = document.getElementById('additionalImagesPreview');
@@ -1547,6 +1667,7 @@ document.getElementById('productForm').addEventListener('submit', function(e) {
 
 function saveProduct() {
     const productId = document.getElementById('productId').value;
+    const shouldRemoveImage = document.getElementById('removeMainImage').value === 'true';
     const name = document.getElementById('productName').value.trim();
     const priceInput = document.getElementById('productPrice');
     const price = priceInput ? (priceInput.value || '0') : '0';
@@ -1580,8 +1701,9 @@ function saveProduct() {
     }
     
     // Warn if editing without image
+    let currentProducts = JSON.parse(localStorage.getItem('products') || '[]');
     if (productId && !imageInput.files[0]) {
-        const existingProduct = products.find(p => p.id === productId);
+        const existingProduct = currentProducts.find(p => p.id === productId);
         if (existingProduct && (!existingProduct.image || existingProduct.image.trim() === '')) {
             if (!confirm('This product has no image. Continue without uploading an image?')) {
                 return;
@@ -1589,7 +1711,7 @@ function saveProduct() {
         }
     }
           
-    let products = JSON.parse(localStorage.getItem('products') || '[]');
+    let products = currentProducts;
     
     // Handle image upload
     const processImage = (file) => {
@@ -1606,12 +1728,16 @@ function saveProduct() {
         
         if (imageInput.files[0]) {
             productImage = await processImage(imageInput.files[0]);
-        } else if (productId) {
+        } else if (productId && !shouldRemoveImage) {
             const existingProduct = products.find(p => p.id === productId);
             if (existingProduct) {
                 productImage = existingProduct.image;
                 additionalImages = existingProduct.additionalImages || [];
             }
+        } else if (shouldRemoveImage) {
+            productImage = '';
+            // When removing main image, also consider if we want to remove additional images
+            // For now let's just clear the main image as requested
         }
         
         if (additionalImagesInput.files.length > 0) {
@@ -1619,7 +1745,7 @@ function saveProduct() {
             additionalImages = await Promise.all(promises);
         }
         
-        // Process flavors with images
+        // Process flavors (images are optional)
         const flavors = [];
         for (const flavorField of flavorFields) {
             const selectEl = flavorField.querySelector('.flavor-name-select');
@@ -1628,6 +1754,8 @@ function saveProduct() {
             const previewEl = flavorField.querySelector('.flavor-image-preview img');
             
             const flavorName = selectEl.value || inputEl.value.trim();
+            if (!flavorName) continue; // Skip if no flavor name
+            
             let flavorImage = '';
             
             if (imageInputEl.files && imageInputEl.files[0]) {
@@ -1636,16 +1764,15 @@ function saveProduct() {
                 flavorImage = previewEl.src;
             }
             
-            if (flavorName && flavorImage) {
-                flavors.push({
-                    name: flavorName,
-                    image: flavorImage
-                });
-            }
+            // Add flavor even without image
+            flavors.push({
+                name: flavorName,
+                image: flavorImage || '' // Empty string if no image
+            });
         }
         
         if (flavors.length === 0) {
-            alert('Please add at least one flavor with image.');
+            alert('Please add at least one flavor.');
             return;
         }
         
@@ -1705,6 +1832,7 @@ function editProduct(productId) {
 
     // Populate form
     document.getElementById('productId').value = product.id;
+    document.getElementById('removeMainImage').value = 'false';
     document.getElementById('productName').value = product.name;
     document.getElementById('productPrice').value = product.price;
     document.getElementById('productBrand').value = product.brand;
@@ -1736,13 +1864,18 @@ function editProduct(productId) {
     if (mainPreview) {
         if (product.image && product.image.trim() !== '') {
             mainPreview.innerHTML = `
-                <div style="margin-top: 15px;">
+                <div style="margin-top: 15px; position: relative; display: inline-block;">
                     <p style="color: var(--success-color); font-weight: 600; margin-bottom: 10px;">
                         <i class="fas fa-check-circle"></i> Current product image
                     </p>
-                    <img src="${product.image}" alt="Product preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; border: 2px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <div style="position: relative;">
+                        <img src="${getImageSource(product.image)}" alt="Product preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; border: 2px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <button type="button" onclick="removeProductImage()" style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2);" title="Remove Image">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                     <p style="margin-top: 10px; color: var(--text-light); font-size: 13px;">
-                        <i class="fas fa-info-circle"></i> Upload a new image to replace this one
+                        <i class="fas fa-info-circle"></i> Upload a new image to replace this one or click trash to remove
                     </p>
                 </div>
             `;
@@ -1764,7 +1897,7 @@ function editProduct(productId) {
     const additionalPreview = document.getElementById('additionalImagesPreview');
     if (additionalPreview && product.additionalImages) {
         additionalPreview.innerHTML = product.additionalImages.map(img => 
-            `<img src="${img}" alt="Additional image">`
+            `<img src="${getImageSource(img)}" alt="Additional image">`
         ).join('');
     }
     
@@ -1772,17 +1905,18 @@ function editProduct(productId) {
     
     // Set form values after populating selects
     setTimeout(() => {
-        document.getElementById('productBrand').value = product.brand;
-        document.getElementById('productFlavor').value = product.flavor;
+        const brandEl = document.getElementById('productBrand');
+        if (brandEl) brandEl.value = product.brand;
     }, 100);
     
-    const formContainer = document.getElementById('productFormContainer');
+    const modalOverlay = document.getElementById('productModal');
     const formTitle = document.getElementById('formTitle');
     
-    if (formContainer) formContainer.style.display = 'block';
-    if (formTitle) formTitle.textContent = 'Edit Product';
+    if (modalOverlay) modalOverlay.style.display = 'flex';
+    if (formTitle) formTitle.innerHTML = '<i class="fas fa-edit"></i> Edit Product';
     
-    formContainer.scrollIntoView({ behavior: 'smooth' });
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
 }
 
 function deleteProduct(productId) {
@@ -1799,791 +1933,563 @@ function deleteProduct(productId) {
 
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.removeItem('isAdminLoggedIn');
-        sessionStorage.removeItem('adminUsername');
+        try {
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('isAdminLoggedIn');
+        } catch (e) {}
         window.location.href = 'login.html';
     }
 }
 
-// Data Export/Import Functions
-function exportData() {
-    try {
-        const products = JSON.parse(localStorage.getItem('products') || '[]');
-        const sliderImages = JSON.parse(localStorage.getItem('sliderImages') || '[]');
-        const featuredProducts = JSON.parse(localStorage.getItem('featuredProducts') || '[]');
-        
-        // Convert base64 images to file references
-        const productsWithFileRefs = products.map((product, index) => {
-            const productCopy = { ...product };
-            if (product.image && product.image.startsWith('data:image')) {
-                // Image is base64 - will be exported as file
-                productCopy.imageFile = `images/product-${product.id || index}.jpg`;
-                productCopy._imageData = product.image; // Keep for file export
-            } else if (product.image && !product.image.startsWith('images/')) {
-                // External URL - keep as is
-                productCopy.image = product.image;
-            }
-            // Remove base64 from main data
-            if (productCopy._imageData) {
-                delete productCopy.image;
-            }
-            return productCopy;
-        });
-        
-        const sliderImagesWithRefs = sliderImages.map((img, index) => {
-            if (img && img.startsWith('data:image')) {
-                return {
-                    file: `images/slider-${index + 1}.jpg`,
-                    _imageData: img
-                };
-            }
-            return img;
-        });
-        
-        const brands = getBrands(); // Get normalized brands structure
-        const data = {
-            storeName: localStorage.getItem('storeName') || 'Premium Store',
-            products: productsWithFileRefs,
-            brands: brands, // Export normalized brand structure
-            flavors: JSON.parse(localStorage.getItem('flavors') || '[]'),
-            sliderImages: sliderImagesWithRefs,
-            featuredProducts: featuredProducts,
-            exportDate: new Date().toISOString(),
-            version: '2.0',
-            hasImages: true
-        };
-        
-        const dataStr = JSON.stringify(data, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `store-data-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        // Also export images as separate files
-        exportImagesAsFiles(products, sliderImages);
-        
-        alert('Data exported successfully!\n\n1. Save the JSON file\n2. Copy the downloaded images to an "images" folder\n3. Copy both to your new computer in the same folder structure');
-    } catch (error) {
-        console.error('Export error:', error);
-        alert('Error exporting data. Please try again.');
-    }
-}
+// Legacy export/import/backup functionality removed as requested
 
-// Export images as separate downloadable files
-function exportImagesAsFiles(products, sliderImages) {
-    let delay = 0;
-    
-    // Export product images with delay between downloads
-    products.forEach((product, index) => {
-        if (product.image && product.image.startsWith('data:image')) {
-            setTimeout(() => {
-                try {
-                    const base64Data = product.image.split(',')[1];
-                    const mimeMatch = product.image.match(/data:image\/(\w+);base64/);
-                    const mimeType = mimeMatch ? mimeMatch[1] : 'jpg';
-                    const byteCharacters = atob(base64Data);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: `image/${mimeType}` });
-                    
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `product-${product.id || index}.${mimeType}`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 100);
-                } catch (error) {
-                    console.error('Error exporting product image:', error);
-                }
-            }, delay);
-            delay += 200; // 200ms delay between each download
-        }
-    });
-    
-    // Export slider images
-    sliderImages.forEach((img, index) => {
-        if (img && img.startsWith('data:image')) {
-            setTimeout(() => {
-                try {
-                    const base64Data = img.split(',')[1];
-                    const mimeMatch = img.match(/data:image\/(\w+);base64/);
-                    const mimeType = mimeMatch ? mimeMatch[1] : 'jpg';
-                    const byteCharacters = atob(base64Data);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: `image/${mimeType}` });
-                    
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `slider-${index + 1}.${mimeType}`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 100);
-                } catch (error) {
-                    console.error('Error exporting slider image:', error);
-                }
-            }, delay);
-            delay += 200;
-        }
-    });
+// Simple modal helpers for product/brand/flavor forms
+function openProductModal() {
+    const modal = document.getElementById('productModal');
+    if (modal) modal.style.display = 'flex';
+    showAddProductForm();
 }
-
-function importData(input) {
-    const file = input.files[0];
-    if (!file) return;
-    
-    if (!confirm('Importing data will replace all current data. Make sure images are in the "images" folder. Continue?')) {
-        input.value = '';
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            
-            // Validate data structure
-            if (!data.version) {
-                alert('Invalid data file. Please make sure you are importing a valid export file.');
-                input.value = '';
-                return;
-            }
-            
-            // Process products - use file references if available, fallback to base64
-            if (data.products && Array.isArray(data.products)) {
-                const processedProducts = data.products.map(product => {
-                    const processed = { ...product };
-                    // If imageFile exists, use it (images should be in images folder)
-                    if (processed.imageFile) {
-                        processed.image = processed.imageFile;
-                        delete processed.imageFile;
-                    }
-                    // If _imageData exists (old format), use it
-                    if (processed._imageData) {
-                        processed.image = processed._imageData;
-                        delete processed._imageData;
-                    }
-                    // If image is already a path or URL, keep it
-                    return processed;
-                });
-                localStorage.setItem('products', JSON.stringify(processedProducts));
-            }
-            
-            // Process slider images
-            if (data.sliderImages && Array.isArray(data.sliderImages)) {
-                const processedSliders = data.sliderImages.map((img, index) => {
-                    if (typeof img === 'object' && img.file) {
-                        // New format with file reference
-                        return img.file;
-                    } else if (typeof img === 'object' && img._imageData) {
-                        // Old format with base64
-                        return img._imageData;
-                    }
-                    return img; // Already a URL or path
-                });
-                localStorage.setItem('sliderImages', JSON.stringify(processedSliders));
-            }
-            
-            // Import other data
-            if (data.storeName) {
-                localStorage.setItem('storeName', data.storeName);
-            }
-            
-            if (data.brands && Array.isArray(data.brands)) {
-                // Normalize brands structure (convert old format to new format if needed)
-                const normalizedBrands = normalizeBrands(data.brands);
-                localStorage.setItem('brands', JSON.stringify(normalizedBrands));
-            }
-            
-            if (data.flavors && Array.isArray(data.flavors)) {
-                localStorage.setItem('flavors', JSON.stringify(data.flavors));
-            }
-            
-            if (data.featuredProducts && Array.isArray(data.featuredProducts)) {
-                localStorage.setItem('featuredProducts', JSON.stringify(data.featuredProducts));
-            }
-            
-            // Reload all admin sections
-            loadStoreSettings();
-            loadSliderImages();
-            loadBrands();
-            loadFlavors();
-            loadProductsAdmin();
-            loadFeaturedProducts();
-            populateBrandAndFlavorSelects();
-            updateDashboardStats();
-            
-            alert('Data imported successfully!\n\nNote: If images are not showing, make sure the "images" folder with all image files is in the same directory as your HTML files.');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Import error:', error);
-            alert('Error importing data. Please make sure the file is a valid export file.');
-        }
-        
-        input.value = '';
-    };
-    
-    reader.onerror = function() {
-        alert('Error reading file. Please try again.');
-        input.value = '';
-    };
-    
-    reader.readAsText(file);
+function closeProductModal() {
+    const modal = document.getElementById('productModal');
+    if (modal) modal.style.display = 'none';
+    hideProductForm();
 }
-
-function createBackup() {
-    try {
-        const brands = getBrands(); // Get normalized brands structure
-        const data = {
-            storeName: localStorage.getItem('storeName') || 'Premium Store',
-            products: JSON.parse(localStorage.getItem('products') || '[]'),
-            brands: brands, // Use normalized brand structure
-            flavors: JSON.parse(localStorage.getItem('flavors') || '[]'),
-            sliderImages: JSON.parse(localStorage.getItem('sliderImages') || '[]'),
-            featuredProducts: JSON.parse(localStorage.getItem('featuredProducts') || '[]'),
-            cart: JSON.parse(localStorage.getItem('cart') || '[]'),
-            exportDate: new Date().toISOString(),
-            version: '2.0',
-            type: 'backup'
-        };
-        
-        const dataStr = JSON.stringify(data, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `store-backup-${new Date().toISOString().split('T')[0]}-${Date.now()}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        alert('Backup created successfully!');
-    } catch (error) {
-        console.error('Backup error:', error);
-        alert('Error creating backup. Please try again.');
-    }
+function openBrandModal() {
+    const modal = document.getElementById('brandModal');
+    if (modal) modal.style.display = 'flex';
 }
+function closeBrandModal() {
+    const modal = document.getElementById('brandModal');
+    if (modal) modal.style.display = 'none';
+}
+function openFlavorModal() {
+    const modal = document.getElementById('flavorModal');
+    if (modal) modal.style.display = 'flex';
+}
+function closeFlavorModal() {
+    const modal = document.getElementById('flavorModal');
+    if (modal) modal.style.display = 'none';
+}
+window.openProductModal = openProductModal;
+window.closeProductModal = closeProductModal;
+window.openBrandModal = openBrandModal;
+window.closeBrandModal = closeBrandModal;
+window.openFlavorModal = openFlavorModal;
+window.closeFlavorModal = closeFlavorModal;
+window.removeProductImage = removeProductImage;
 
-// Clear all products, brands, and flavors
+// Database Import/Export Management
+// Excel Import/Export Functions - New Implementation
+
+// Comprehensive data clearance
 function clearAllData() {
-    if (!confirm('⚠️ WARNING: This will delete ALL products, brands, and flavors!\n\nThis action cannot be undone. Are you absolutely sure?')) {
-        return;
-    }
-    
-    // Double confirmation
-    if (!confirm('This is your last chance. Click OK to permanently delete:\n- All products/items\n- All brands\n- All flavors')) {
-        return;
-    }
-    
-    try {
-        // Clear products
-        localStorage.setItem('products', JSON.stringify([]));
-        
-        // Clear brands
-        localStorage.setItem('brands', JSON.stringify([]));
-        
-        
-        // Clear flavors
-        localStorage.setItem('flavors', JSON.stringify([]));
-        
-        // Also clear featured products since they depend on products
-        localStorage.setItem('featuredProducts', JSON.stringify([]));
-        
-        // Set a flag to prevent auto-initialization of default brands
-        localStorage.setItem('dataManuallyCleared', 'true');
-        
-        // Reload all displays
-        loadProductsAdmin();
-        loadBrands();
-        loadFlavors();
-        loadFeaturedProducts();
-        populateBrandAndFlavorSelects();
-        updateDashboardStats();
-        
-        alert('✅ All data cleared successfully! You can now manually add brands, flavors, and products again.');
-    } catch (error) {
-        console.error('Clear data error:', error);
-        alert('Error clearing data. Please try again.');
-    }
-}
-
-// Export Products to JSON/CSV/Excel
-function exportProducts() {
-    const products = JSON.parse(localStorage.getItem('products') || '[]');
-    
-    if (products.length === 0) {
-        alert('No products to export!');
-        return;
-    }
-    
-    // Ask user for export format
-    const formatChoice = prompt(
-        'Choose export format:\n' +
-        '1 - JSON\n' +
-        '2 - CSV\n' +
-        '3 - Excel (.xlsx)\n\n' +
-        'Enter 1, 2, or 3:'
+    // Create a custom confirmation dialog
+    const confirmed = confirm(
+        '⚠️ CRITICAL WARNING: This will PERMANENTLY DELETE ALL:\n\n' +
+        '• All Products & Inventory\n' +
+        '• All Brands & Sub-brands\n' +
+        '• All Flavors & Brand-Flavor mappings\n' +
+        '• Featured Products & Slider Images\n' +
+        '• Cart Data & Store Settings\n' +
+        '• User Accounts (except default admin)\n\n' +
+        'This action CANNOT be undone!\n\n' +
+        'Are you absolutely sure you want to continue?'
     );
     
-    if (!formatChoice) return;
-    
-    const format = formatChoice.trim();
-    const dateStr = new Date().toISOString().split('T')[0];
-    
-    if (format === '1') {
-        // Export as JSON
-        const dataStr = JSON.stringify(products, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `products_export_${dateStr}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        alert(`Successfully exported ${products.length} products to JSON file!`);
-    } else if (format === '2') {
-        // Export as CSV
-        const headers = ['ID', 'Name', 'Brand', 'Flavor', 'Price', 'Stock', 'Status', 'Image'];
-        const csvRows = [headers.join(',')];
-        
-        products.forEach(product => {
-            const row = [
-                product.id || '',
-                `"${(product.name || '').replace(/"/g, '""')}"`,
-                `"${(product.brand || '').replace(/"/g, '""')}"`,
-                `"${(product.flavor || '').replace(/"/g, '""')}"`,
-                product.price || '0',
-                product.stock || '0',
-                product.status || 'available',
-                `"${(product.image || '').replace(/"/g, '""')}"`
-            ];
-            csvRows.push(row.join(','));
-        });
-        
-        const csvContent = csvRows.join('\n');
-        const dataBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `products_export_${dateStr}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        alert(`Successfully exported ${products.length} products to CSV file!`);
-    } else if (format === '3') {
-        // Export as Excel
-        if (typeof XLSX === 'undefined') {
-            alert('Excel library not loaded. Please refresh the page and try again.');
-            return;
-        }
-        
-        try {
-            // Prepare data for Excel
-            const worksheetData = [
-                ['ID', 'Name', 'Brand', 'Flavor', 'Price', 'Stock', 'Status', 'Image']
-            ];
-            
-            products.forEach(product => {
-                worksheetData.push([
-                    product.id || '',
-                    product.name || '',
-                    product.brand || '',
-                    product.flavor || '',
-                    product.price || 0,
-                    product.stock || 0,
-                    product.status || 'available',
-                    product.image || ''
-                ]);
-            });
-            
-            // Create workbook and worksheet
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-            
-            // Set column widths
-            ws['!cols'] = [
-                { wch: 15 }, // ID
-                { wch: 30 }, // Name
-                { wch: 15 }, // Brand
-                { wch: 20 }, // Flavor
-                { wch: 10 }, // Price
-                { wch: 10 }, // Stock
-                { wch: 12 }, // Status
-                { wch: 40 }  // Image
-            ];
-            
-            // Add worksheet to workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'Products');
-            
-            // Generate Excel file
-            XLSX.writeFile(wb, `products_export_${dateStr}.xlsx`);
-            alert(`Successfully exported ${products.length} products to Excel file!`);
-        } catch (error) {
-            console.error('Excel export error:', error);
-            alert('Error exporting to Excel: ' + error.message);
-        }
-    } else {
-        alert('Invalid format choice. Please enter 1, 2, or 3.');
-    }
-}
-
-// Import Products from JSON/CSV
-function importProducts() {
-    const fileInput = document.getElementById('importFileInput');
-    if (fileInput) {
-        fileInput.click();
-    }
-}
-
-// Handle file import
-function handleFileImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    const fileName = file.name.toLowerCase();
-    
-    // Handle Excel files separately (binary)
-    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        if (typeof XLSX === 'undefined') {
-            alert('Excel library not loaded. Please refresh the page and try again.');
-            event.target.value = '';
-            return;
-        }
-        
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Get first worksheet
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Convert to JSON array
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-                    header: 1,
-                    defval: ''
-                });
-                
-                if (jsonData.length < 2) {
-                    alert('Invalid Excel file! File must contain header and at least one product.');
-                    event.target.value = '';
-                    return;
-                }
-                
-                // Get headers (first row)
-                const headers = jsonData[0].map(h => String(h).trim());
-                const importedProducts = [];
-                
-                // Process rows (skip header row)
-                for (let i = 1; i < jsonData.length; i++) {
-                    const row = jsonData[i];
-                    if (!row || row.length === 0) continue;
-                    
-                    const product = {};
-                    headers.forEach((header, index) => {
-                        const value = row[index];
-                        const cleanValue = value !== undefined && value !== null ? String(value).trim() : '';
-                        
-                        if (cleanValue === '') return;
-                        
-                        switch(header.toLowerCase()) {
-                            case 'id':
-                                product.id = cleanValue;
-                                break;
-                            case 'name':
-                                product.name = cleanValue;
-                                break;
-                            case 'brand':
-                                product.brand = cleanValue;
-                                break;
-                            case 'flavor':
-                                product.flavor = cleanValue;
-                                break;
-                            case 'price':
-                                product.price = parseFloat(cleanValue) || 0;
-                                break;
-                            case 'stock':
-                                product.stock = parseInt(cleanValue) || 0;
-                                break;
-                            case 'status':
-                                product.status = cleanValue || 'available';
-                                break;
-                            case 'image':
-                                product.image = cleanValue;
-                                break;
-                        }
-                    });
-                    
-                    if (product.name) {
-                        if (!product.id) {
-                            product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-                        }
-                        importedProducts.push(product);
-                    }
-                }
-                
-                if (importedProducts.length === 0) {
-                    alert('No valid products found in Excel file!');
-                    event.target.value = '';
-                    return;
-                }
-                
-                const action = confirm(
-                    `Found ${importedProducts.length} products.\n\n` +
-                    'Click OK to MERGE with existing products (duplicates will be skipped).\n' +
-                    'Click Cancel to REPLACE all existing products.'
-                );
-                
-                if (action) {
-                    mergeProducts(importedProducts);
-                } else {
-                    if (confirm('Are you sure you want to REPLACE all existing products? This cannot be undone!')) {
-                        replaceProducts(importedProducts);
-                    }
-                }
-                
-                event.target.value = '';
-            } catch (error) {
-                console.error('Excel import error:', error);
-                alert('Error importing Excel file: ' + error.message);
-                event.target.value = '';
-            }
-        };
-        
-        reader.readAsArrayBuffer(file);
+    if (!confirmed) {
         return;
     }
     
-    // Handle JSON and CSV files (text)
+    // Second confirmation
+    const doubleConfirmed = confirm(
+        '⚠️ FINAL WARNING!\n\n' +
+        'You are about to delete EVERYTHING from the local database.\n\n' +
+        'Click OK to proceed or Cancel to abort.'
+    );
+    
+    if (!doubleConfirmed) {
+        return;
+    }
+
+    try {
+        // Clear all known localStorage items
+        const keysToClear = [
+            'products', 
+            'brands', 
+            'flavors', 
+            'brandFlavors', 
+            'brandSubBrands', 
+            'featuredProducts', 
+            'cart', 
+            'sliderImages',
+            'storeName',
+            'users',
+            'currentUser',
+            'productViewMode',
+            'version',
+            'isLoggedIn',
+            'lastViewedBrand',
+            'lastUpdateMessageTime'
+        ];
+        
+        keysToClear.forEach(key => localStorage.removeItem(key));
+        
+        // Reset essential structures to empty
+        localStorage.setItem('products', '[]');
+        localStorage.setItem('brands', '[]');
+        localStorage.setItem('flavors', '[]');
+        localStorage.setItem('brandFlavors', '{}');
+        localStorage.setItem('brandSubBrands', '{}');
+        localStorage.setItem('featuredProducts', '[]');
+        localStorage.setItem('cart', '[]');
+        
+        // Set manual clear flag to prevent auto-initialization from app.js
+        localStorage.setItem('dataManuallyCleared', 'true');
+        
+        alert('✅ All data cleared successfully!\n\nThe database has been completely wiped clean.');
+        
+        // Redirect to index or reload
+        window.location.href = 'index.html';
+    } catch (error) {
+        console.error('Clear All Data Error:', error);
+        alert('❌ Error clearing data. Please try again.');
+    }
+}
+
+function clearDatabase() {
+    clearAllData();
+}
+
+// Trigger Excel import file input
+function triggerExcelImport() {
+    const input = document.getElementById('excelImportInput');
+    if (input) input.click();
+}
+
+// Handle Excel file import
+function handleExcelImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            if (fileName.endsWith('.json')) {
-                // Import JSON
-                const importedProducts = JSON.parse(e.target.result);
-                
-                if (!Array.isArray(importedProducts)) {
-                    alert('Invalid JSON format! Expected an array of products.');
-                    return;
-                }
-                
-                if (importedProducts.length === 0) {
-                    alert('The file contains no products!');
-                    return;
-                }
-                
-                const action = confirm(
-                    `Found ${importedProducts.length} products.\n\n` +
-                    'Click OK to MERGE with existing products (duplicates will be skipped).\n' +
-                    'Click Cancel to REPLACE all existing products.'
-                );
-                
-                if (action) {
-                    // Merge mode
-                    mergeProducts(importedProducts);
-                } else {
-                    // Replace mode
-                    if (confirm('Are you sure you want to REPLACE all existing products? This cannot be undone!')) {
-                        replaceProducts(importedProducts);
-                    }
-                }
-            } else if (fileName.endsWith('.csv')) {
-                // Import CSV
-                const csvContent = e.target.result;
-                const lines = csvContent.split('\n').filter(line => line.trim());
-                
-                if (lines.length < 2) {
-                    alert('Invalid CSV format! File must contain header and at least one product.');
-                    return;
-                }
-                
-                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-                const importedProducts = [];
-                
-                for (let i = 1; i < lines.length; i++) {
-                    const values = parseCSVLine(lines[i]);
-                    if (values.length === 0) continue;
-                    
-                    const product = {};
-                    headers.forEach((header, index) => {
-                        const value = values[index] || '';
-                        const cleanValue = value.replace(/^"|"$/g, '').replace(/""/g, '"');
-                        
-                        switch(header.toLowerCase()) {
-                            case 'id':
-                                product.id = cleanValue;
-                                break;
-                            case 'name':
-                                product.name = cleanValue;
-                                break;
-                            case 'brand':
-                                product.brand = cleanValue;
-                                break;
-                            case 'flavor':
-                                product.flavor = cleanValue;
-                                break;
-                            case 'price':
-                                product.price = parseFloat(cleanValue) || 0;
-                                break;
-                            case 'stock':
-                                product.stock = parseInt(cleanValue) || 0;
-                                break;
-                            case 'status':
-                                product.status = cleanValue || 'available';
-                                break;
-                            case 'image':
-                                product.image = cleanValue;
-                                break;
-                        }
-                    });
-                    
-                    if (product.name) {
-                        if (!product.id) {
-                            product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-                        }
-                        importedProducts.push(product);
-                    }
-                }
-                
-                if (importedProducts.length === 0) {
-                    alert('No valid products found in CSV file!');
-                    return;
-                }
-                
-                const action = confirm(
-                    `Found ${importedProducts.length} products.\n\n` +
-                    'Click OK to MERGE with existing products (duplicates will be skipped).\n' +
-                    'Click Cancel to REPLACE all existing products.'
-                );
-                
-                if (action) {
-                    mergeProducts(importedProducts);
-                } else {
-                    if (confirm('Are you sure you want to REPLACE all existing products? This cannot be undone!')) {
-                        replaceProducts(importedProducts);
-                    }
+            let workbook;
+            const data = e.target.result;
+            
+            // Check if it's CSV or Excel
+            if (file.name.endsWith('.csv')) {
+                // Parse CSV using SheetJS (handles quoted fields properly)
+                workbook = XLSX.read(data, { type: 'string' });
+                // If CSV only has one sheet, rename it to 'Products' for consistency
+                if (workbook.SheetNames.length === 1 && workbook.SheetNames[0] !== 'Products') {
+                    const oldName = workbook.SheetNames[0];
+                    workbook.SheetNames[0] = 'Products';
+                    workbook.Sheets['Products'] = workbook.Sheets[oldName];
+                    delete workbook.Sheets[oldName];
                 }
             } else {
-                alert('Unsupported file format! Please use .json, .csv, or .xlsx/.xls files.');
+                // Parse Excel file using SheetJS
+                workbook = XLSX.read(data, { type: 'binary' });
             }
+
+            // Process Products sheet
+            let productsData = [];
+            const productsSheetName = workbook.SheetNames.find(name => 
+                name.toLowerCase() === 'products' || name.toLowerCase() === 'product'
+            ) || workbook.SheetNames[0]; // Use first sheet if no Products sheet found
+            
+            if (productsSheetName && workbook.Sheets[productsSheetName]) {
+                const worksheet = workbook.Sheets[productsSheetName];
+                const sheetData = XLSX.utils.sheet_to_json(worksheet);
+                
+                productsData = sheetData.map((row, index) => {
+                    const slugify = (s) => String(s || '').toLowerCase().trim().replace(/\s+/g, '-');
+                    const getValue = (obj, keys) => {
+                        for (const key of keys) {
+                            const val = obj[key] || obj[key.toLowerCase()] || obj[key.toUpperCase()];
+                            if (val !== undefined && val !== null && val !== '') return String(val).trim();
+                        }
+                        return '';
+                    };
+                    
+                    // Generate ID if not provided
+                    const id = getValue(row, ['id', 'ID', 'Id', 'product_id', 'Product ID']) || 
+                              `product-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`;
+                    
+                    // Get product name (required)
+                    const name = getValue(row, ['product name', 'Product Name', 'name', 'Name', 'product_name', 'Product']);
+                    if (!name) return null; // Skip rows without product name
+                    
+                    // Get brand (required)
+                    const brand = getValue(row, ['brand', 'Brand', 'manufacturer', 'Manufacturer']);
+                    
+                    // Get price
+                    const price = parseFloat(getValue(row, ['price', 'Price', 'cost', 'Cost']) || '0') || 0;
+                    
+                    // Get stock
+                    const stock = parseInt(getValue(row, ['stock', 'Stock', 'quantity', 'Quantity', 'qty']) || '0') || 0;
+                    
+                    // Get status (simplified parsing)
+                    const statusRaw = getValue(row, ['status', 'Status', 'availability', 'Availability']).toLowerCase();
+                    let status = 'available';
+                    if (statusRaw.includes('out') || statusRaw.includes('unavailable') || statusRaw === 'out-of-stock') {
+                        status = 'out-of-stock';
+                    } else if (statusRaw.includes('coming') || statusRaw.includes('soon') || statusRaw === 'coming-soon') {
+                        status = 'coming-soon';
+                    }
+                    
+                    // Get description
+                    const description = getValue(row, ['description', 'Description', 'desc', 'Desc', 'details', 'Details']);
+                    
+                    // Get image URL
+                    const image = getValue(row, ['image url', 'Image URL', 'image', 'Image', 'img', 'Img', 'image_url']);
+                    
+                    // Parse flavors - NEW SIMPLIFIED FORMAT: comma-separated
+                    let flavors = [];
+                    const flavorsStr = getValue(row, ['flavors', 'Flavors', 'flavour', 'Flavour', 'flavours', 'Flavours']);
+                    if (flavorsStr) {
+                        // Split by comma and clean up
+                        const flavorList = flavorsStr.split(',').map(f => f.trim()).filter(f => f);
+                        flavors = flavorList.map(f => ({ name: f, image: '' }));
+                    }
+                    
+                    // If no flavors found, try single flavor field
+                    if (flavors.length === 0) {
+                        const singleFlavor = getValue(row, ['flavor', 'Flavor']);
+                        if (singleFlavor) {
+                            flavors = [{ name: singleFlavor, image: '' }];
+                        }
+                    }
+                    
+                    // Default flavor if none provided
+                    if (flavors.length === 0) {
+                        flavors = [{ name: 'Default', image: '' }];
+                    }
+                    
+                    // Parse specifications - NEW FORMAT: pipe-separated or comma-separated
+                    let specs = [];
+                    const specsStr = getValue(row, ['specifications', 'Specifications', 'specs', 'Specs', 'spec', 'Spec']);
+                    if (specsStr) {
+                        // Try pipe separator first (recommended), then comma
+                        if (specsStr.includes('|')) {
+                            specs = specsStr.split('|').map(s => s.trim()).filter(s => s);
+                        } else {
+                            specs = specsStr.split(',').map(s => s.trim()).filter(s => s);
+                        }
+                    }
+                    
+                    // Parse additional images - comma-separated
+                    let additionalImages = [];
+                    const addImagesStr = getValue(row, ['additional images', 'Additional Images', 'additional_images', 'images', 'Images', 'photos', 'Photos']);
+                    if (addImagesStr) {
+                        additionalImages = addImagesStr.split(',').map(img => img.trim()).filter(img => img);
+                    }
+                    
+                    return {
+                        id,
+                        name,
+                        brand: brand || 'Unbranded',
+                        price,
+                        stock,
+                        status,
+                        description,
+                        image,
+                        flavors,
+                        flavor: flavors[0].name, // First flavor as default
+                        additionalImages,
+                        specs
+                    };
+                }).filter(p => p && p.name); // Filter out null/empty products
+            }
+
+            // Process Brands sheet
+            let brandsData = [];
+            const brandsSheetName = workbook.SheetNames.find(name => 
+                name.toLowerCase() === 'brands' || name.toLowerCase() === 'brand'
+            );
+            
+            if (brandsSheetName && workbook.Sheets[brandsSheetName]) {
+                const worksheet = workbook.Sheets[brandsSheetName];
+                const sheetData = XLSX.utils.sheet_to_json(worksheet);
+                
+                brandsData = sheetData.map(row => {
+                    const getValue = (obj, keys) => {
+                        for (const key of keys) {
+                            const val = obj[key] || obj[key.toLowerCase()] || obj[key.toUpperCase()];
+                            if (val !== undefined && val !== null && val !== '') return String(val).trim();
+                        }
+                        return '';
+                    };
+                    return getValue(row, ['name', 'Name', 'brand', 'Brand', 'brand_name', 'Brand Name']);
+                }).filter(b => b);
+            }
+
+            // Process Flavors sheet
+            let flavorsData = [];
+            const flavorsSheetName = workbook.SheetNames.find(name => 
+                name.toLowerCase() === 'flavors' || name.toLowerCase() === 'flavor' || name.toLowerCase() === 'flavours'
+            );
+            
+            if (flavorsSheetName && workbook.Sheets[flavorsSheetName]) {
+                const worksheet = workbook.Sheets[flavorsSheetName];
+                const sheetData = XLSX.utils.sheet_to_json(worksheet);
+                
+                flavorsData = sheetData.map(row => {
+                    const getValue = (obj, keys) => {
+                        for (const key of keys) {
+                            const val = obj[key] || obj[key.toLowerCase()] || obj[key.toUpperCase()];
+                            if (val !== undefined && val !== null && val !== '') return String(val).trim();
+                        }
+                        return '';
+                    };
+                    return getValue(row, ['name', 'Name', 'flavor', 'Flavor', 'flavour', 'Flavour', 'flavor_name', 'Flavor Name']);
+                }).filter(f => f);
+            }
+
+            // Merge with existing data
+            const slugify = (s) => String(s || '').toLowerCase().trim().replace(/\s+/g, '-');
+            
+            // Merge brands
+            const existingBrands = getBrands();
+            const brandMap = new Map();
+            existingBrands.forEach(b => {
+                const name = b.name || b;
+                brandMap.set(slugify(name), { name: name, displayOrder: b.displayOrder || existingBrands.length });
+            });
+            brandsData.forEach((brandName, idx) => {
+                if (!brandName) return;
+                const key = slugify(brandName);
+                if (!brandMap.has(key)) {
+                    brandMap.set(key, { name: brandName, displayOrder: existingBrands.length + idx + 1 });
+                }
+            });
+            // Also extract brands from products
+            productsData.forEach(p => {
+                if (p.brand) {
+                    const key = slugify(p.brand);
+                    if (!brandMap.has(key)) {
+                        brandMap.set(key, { name: p.brand, displayOrder: brandMap.size + 1 });
+                    }
+                }
+            });
+            const mergedBrands = Array.from(brandMap.values());
+            localStorage.setItem('brands', JSON.stringify(mergedBrands));
+
+            // Merge flavors
+            const existingFlavors = JSON.parse(localStorage.getItem('flavors') || '[]');
+            const flavorSet = new Set();
+            existingFlavors.forEach(f => {
+                const name = typeof f === 'string' ? f : (f && f.name) ? f.name : '';
+                if (name) flavorSet.add(slugify(name));
+            });
+            flavorsData.forEach(f => {
+                if (f) flavorSet.add(slugify(f));
+            });
+            // Also extract flavors from products
+            productsData.forEach(p => {
+                if (p.flavors && Array.isArray(p.flavors)) {
+                    p.flavors.forEach(f => {
+                        const name = typeof f === 'string' ? f : (f && f.name) ? f.name : '';
+                        if (name) flavorSet.add(slugify(name));
+                    });
+                }
+            });
+            const mergedFlavors = Array.from(flavorSet).map(f => ({ name: f.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) }));
+            localStorage.setItem('flavors', JSON.stringify(mergedFlavors));
+
+            // Merge products (skip duplicates: if product already exists, ignore imported row)
+            const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+            const productMap = new Map();
+            const keyOf = (p) => {
+                const pid = String(p.id || '').trim();
+                if (pid) return pid;
+                return `${slugify(p.name)}|${slugify(p.brand)}`;
+            };
+            existingProducts.forEach(p => {
+                productMap.set(keyOf(p), p);
+            });
+            
+            let skippedDuplicates = 0;
+            productsData.forEach(p => {
+                const key = keyOf(p);
+                if (productMap.has(key)) {
+                    // Existing product found; skip this imported item
+                    skippedDuplicates++;
+                    return;
+                }
+                productMap.set(key, p);
+            });
+            
+            const mergedProducts = Array.from(productMap.values());
+            localStorage.setItem('products', JSON.stringify(mergedProducts));
+            localStorage.removeItem('dataManuallyCleared');
+            
+            alert(`✅ Import successful!\n\nProducts processed: ${productsData.length}\nProducts added: ${productsData.length - skippedDuplicates}\nProducts skipped (already existed): ${skippedDuplicates}\nTotal products after import: ${mergedProducts.length}\nBrands: ${mergedBrands.length}\nFlavors: ${mergedFlavors.length}`);
+            location.reload();
         } catch (error) {
             console.error('Import error:', error);
-            alert('Error importing file: ' + error.message);
+            alert('Error importing Excel file. Please ensure the file format is correct.\n\nRequired sheets: Products (required), Brands (optional), Flavors (optional)');
         }
-        
-        // Reset file input
-        event.target.value = '';
     };
     
-    reader.readAsText(file);
-}
-
-// Parse CSV line handling quoted values
-function parseCSVLine(line) {
-    const values = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        
-        if (char === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++; // Skip next quote
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            values.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
+    // Read file based on type
+    if (file.name.endsWith('.csv')) {
+        reader.readAsText(file);
+    } else {
+        reader.readAsBinaryString(file);
     }
-    values.push(current);
-    return values;
+    event.target.value = '';
 }
 
-// Merge imported products with existing ones
-function mergeProducts(importedProducts) {
-    let existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-    let added = 0;
-    let skipped = 0;
-    
-    importedProducts.forEach(imported => {
-        // Check for duplicates by ID or name+brand combination
-        const isDuplicate = existingProducts.some(existing => 
-            existing.id === imported.id || 
-            (existing.name === imported.name && existing.brand === imported.brand)
-        );
+// Export to Excel with Products, Brands, and Flavors - Simplified Format
+function exportToExcel() {
+    try {
+        const products = JSON.parse(localStorage.getItem('products') || '[]');
+        const brands = getBrands();
+        const flavors = JSON.parse(localStorage.getItem('flavors') || '[]');
+
+        // Prepare Products data with simplified format
+        // Flavors are comma-separated, easy to edit in Excel
+        const productsData = products.map(p => ({
+            'Product Name': p.name || '',
+            'Brand': p.brand || '',
+            'Flavors': Array.isArray(p.flavors) ? p.flavors.map(f => typeof f === 'string' ? f : f.name).join(', ') : (p.flavor || ''),
+            'Price': p.price || 0,
+            'Stock': p.stock || 0,
+            'Status': p.status || 'available',
+            'Description': p.description || '',
+            'Image URL': p.image || '',
+            'Specifications': Array.isArray(p.specs) ? p.specs.join(' | ') : '',
+            'Additional Images': Array.isArray(p.additionalImages) ? p.additionalImages.join(', ') : ''
+        }));
+
+        // Create workbook with single Products sheet (brands and flavors auto-extracted)
+        const workbook = XLSX.utils.book_new();
         
-        if (!isDuplicate) {
-            if (!imported.id) {
-                imported.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        // Add Products sheet (main sheet - brands and flavors extracted automatically)
+        const productsSheet = XLSX.utils.json_to_sheet(productsData);
+        
+        // Set column widths for better readability
+        const colWidths = [
+            { wch: 35 }, // Product Name
+            { wch: 15 }, // Brand
+            { wch: 40 }, // Flavors
+            { wch: 10 }, // Price
+            { wch: 10 }, // Stock
+            { wch: 12 }, // Status
+            { wch: 50 }, // Description
+            { wch: 40 }, // Image URL
+            { wch: 40 }, // Specifications
+            { wch: 40 }  // Additional Images
+        ];
+        productsSheet['!cols'] = colWidths;
+        
+        XLSX.utils.book_append_sheet(workbook, productsSheet, 'Products');
+        
+        // Optional: Add separate sheets for reference (can be ignored during import)
+        if (brands.length > 0) {
+            const brandsData = brands.map(b => ({
+                'Brand Name': b.name || b || ''
+            }));
+            const brandsSheet = XLSX.utils.json_to_sheet(brandsData);
+            XLSX.utils.book_append_sheet(workbook, brandsSheet, 'Brands (Reference)');
+        }
+        
+        if (flavors.length > 0) {
+            const flavorsData = flavors.map(f => ({
+                'Flavor Name': typeof f === 'string' ? f : (f && f.name) ? f.name : ''
+            }));
+            const flavorsSheet = XLSX.utils.json_to_sheet(flavorsData);
+            XLSX.utils.book_append_sheet(workbook, flavorsSheet, 'Flavors (Reference)');
+        }
+
+        // Generate filename with timestamp
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+        const filename = `store-data-${ts}.xlsx`;
+
+        // Write and download
+        XLSX.writeFile(workbook, filename);
+        
+        alert(`✅ Excel file exported successfully!\n\nFilename: ${filename}\n\n📋 Format:\n• Products sheet: All product data\n• Brands & Flavors: Auto-extracted from products\n• Easy to edit: Just modify the Products sheet\n\nProducts: ${productsData.length}`);
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting to Excel. Please try again.');
+    }
+}
+
+// Download Excel template - Simplified Format
+function downloadExcelTemplate() {
+    try {
+        // Sample data for template - Simple format
+        const productsData = [
+            {
+                'Product Name': 'Geek Bar Pulse X 25000 Puffs 5pk',
+                'Brand': 'Geek Bar',
+                'Flavors': 'Blue Razz Ice, Mint, Orange, Watermelon Ice',
+                'Price': 62.50,
+                'Stock': 100,
+                'Status': 'available',
+                'Description': 'Premium disposable vape with 25000 puffs. Features rechargeable battery and 18mL e-liquid capacity.',
+                'Image URL': 'https://example.com/image.jpg',
+                'Specifications': '25000 Puffs | Rechargeable | 18mL E-liquid | 5% Nicotine',
+                'Additional Images': 'https://example.com/img1.jpg, https://example.com/img2.jpg'
+            },
+            {
+                'Product Name': 'RAZ LTX 25000 Puffs 5pk',
+                'Brand': 'RAZ',
+                'Flavors': 'Blue Razz Ice, Strawberry Ice, Watermelon Ice',
+                'Price': 57.50,
+                'Stock': 50,
+                'Status': 'available',
+                'Description': 'High-capacity disposable vape with exceptional flavor variety.',
+                'Image URL': 'https://example.com/raz-image.jpg',
+                'Specifications': '25000 Puffs | Pre-filled | 5 Devices per pack',
+                'Additional Images': ''
             }
-            existingProducts.push(imported);
-            added++;
-        } else {
-            skipped++;
-        }
-    });
-    
-    // IMPORTANT: Do NOT automatically add brands from imported products
-    // Brands must be added manually through the Brands Management section
-    // This prevents brands from being auto-created when products are imported
-    
-    localStorage.setItem('products', JSON.stringify(existingProducts));
-    loadProductsAdmin();
-    updateDashboardStats();
-    alert(`Import completed!\n\nAdded: ${added} products\nSkipped: ${skipped} duplicates\n\nNote: Brands are NOT automatically added. Add brands manually in the Brands Management section if needed.`);
-}
+        ];
 
-// Replace all existing products
-function replaceProducts(importedProducts) {
-    // Generate IDs for products that don't have them
-    importedProducts.forEach(product => {
-        if (!product.id) {
-            product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-        }
-    });
-    
-    // IMPORTANT: Do NOT automatically extract and add brands from imported products
-    // Brands must be added manually through the Brands Management section
-    // This prevents brands from being auto-created when products are replaced
-    
-    localStorage.setItem('products', JSON.stringify(importedProducts));
-    loadProductsAdmin();
-    updateDashboardStats();
-    alert(`Successfully replaced all products with ${importedProducts.length} imported products!\n\nNote: Brands are NOT automatically added. Add brands manually in the Brands Management section if needed.`);
-}
+        // Create workbook
+        const workbook = XLSX.utils.book_new();
+        
+        // Add Products sheet with proper formatting
+        const productsSheet = XLSX.utils.json_to_sheet(productsData);
+        
+        // Set column widths
+        const colWidths = [
+            { wch: 35 }, // Product Name
+            { wch: 15 }, // Brand
+            { wch: 40 }, // Flavors
+            { wch: 10 }, // Price
+            { wch: 10 }, // Stock
+            { wch: 12 }, // Status
+            { wch: 50 }, // Description
+            { wch: 40 }, // Image URL
+            { wch: 40 }, // Specifications
+            { wch: 40 }  // Additional Images
+        ];
+        productsSheet['!cols'] = colWidths;
+        
+        XLSX.utils.book_append_sheet(workbook, productsSheet, 'Products');
 
+        // Write and download
+        XLSX.writeFile(workbook, 'store-data-template.xlsx');
+        
+        alert('✅ Excel template downloaded!\n\nFilename: store-data-template.xlsx\n\n📋 Instructions:\n1. Fill in the Products sheet\n2. Separate multiple flavors with commas\n3. Brands and flavors are auto-extracted\n4. Status: available, out-of-stock, or coming-soon\n5. Import the file when ready!');
+    } catch (error) {
+        console.error('Template error:', error);
+        alert('Error generating template. Please try again.');
+    }
+}
 // Initialize products from code (only if products don't exist)
 // This ensures products are available when folder is moved to another PC
 function initializeProductsFromCode() {
+    // Respect manual clear flag: do not auto-initialize after clearing
+    const manuallyCleared = localStorage.getItem('dataManuallyCleared') === 'true';
+    if (manuallyCleared) {
+        console.log('Manual clear flag set, skipping product initialization');
+        return;
+    }
     // Check if products already exist
     const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
     if (existingProducts.length > 0) {
@@ -2595,420 +2501,23 @@ function initializeProductsFromCode() {
 
     // Helper function to get embedded image
     function getProductImage(imagePath) {
-        // First try embedded images
+        if (!imagePath) return '';
+        
+        // Try to get from embedded images first
         if (typeof getEmbeddedImage === 'function') {
-            const embedded = getEmbeddedImage(imagePath);
+            // Try with original path, then without images/ prefix
+            let embedded = getEmbeddedImage(imagePath);
+            if (!embedded && imagePath.startsWith('images/')) {
+                embedded = getEmbeddedImage(imagePath.replace(/^images\//, ''));
+            }
             if (embedded) return embedded;
         }
+        
         // Fallback to regular image path
-        return 'images/' + imagePath;
+        return imagePath.startsWith('images/') ? imagePath : 'images/' + imagePath;
     }
 
-    const products = [
-        // YOVO Products
-        {
-            id: 'yovo_jb50000_pod_5pk',
-            name: 'YOVO JB50000 Pod 5pk',
-            brand: 'YOVO',
-            price: 42.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blue Razz Ice',
-            flavors: [
-                { name: 'Blue Razz Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Fresh Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Infinite Swirl', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Miami Mint', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Orange Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Peach Raspberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Sour Apple', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Sour Strawberry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Triple Berry', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') },
-                { name: 'Watermelon Ice', image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg') }
-            ],
-            image: getProductImage('yovo/yovo_jb50000_pod_5pk.jpg'),
-            description: 'YOVO JB50000 Pod 5pk - Premium vaping experience with long-lasting pods. Master Case: 20 x 5pk.',
-            specs: ['50000 Puffs', '5 Pods per pack', 'Rechargeable']
-        },
-        {
-            id: 'yovo_jb50000_kit_5pk',
-            name: 'YOVO JB50000 Kit 5pk',
-            brand: 'YOVO',
-            price: 50.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Miami Mint',
-            flavors: [{
-                name: 'Miami Mint',
-                image: getProductImage('yovo/yovo_jb50000_kit_5pk.jpg')
-            }],
-            image: getProductImage('yovo/yovo_jb50000_kit_5pk.jpg'),
-            description: 'YOVO JB50000 Kit 5pk - Complete starter kit with 5 pods. Master Case: 18 x 5pk.',
-            specs: ['50000 Puffs', '5 Kits per pack', 'Complete Starter Kit']
-        },
-
-        // Geek Bar Products
-        {
-            id: 'geek_bar_pulse_x_25000',
-            name: 'Geek Bar Pulse X 25000 Puffs 5pk',
-            brand: 'Geek Bar',
-            price: 62.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Orange Mint',
-            flavors: [
-                { name: 'Orange Mint', image: getProductImage('geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg') },
-                { name: 'Blue Razz Ice', image: getProductImage('geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg') }
-            ],
-            image: getProductImage('geek bar/Geek Bar Pulse X 25000 Puffs 5pk/Geek Bar Pulse X 25000 Puffs 5pk.jpg'),
-            description: 'Geek Bar Pulse X 25000 Puffs - World\'s first 3D curved screen with advanced technology. Experience ultimate vaping pleasure with 18mL e-liquid, 5% (50mg) nicotine strength, and 820mAh battery capacity.',
-            specs: ['25000 Puffs', '5 Devices per pack', '3D Curved Screen', 'Rechargeable', '18mL E-liquid', '5% (50mg) Nicotine', '820mAh Battery']
-        },
-        {
-            id: 'geek_bar_meloso_max_9000',
-            name: 'Geek Bar Meloso Max 9000 Puffs 5pk',
-            brand: 'Geek Bar',
-            price: 32.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Ginger Ale',
-            flavors: [
-                { name: 'Ginger Ale', image: getProductImage('geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg') },
-                { name: 'Tropical Rainbow', image: getProductImage('geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg') }
-            ],
-            image: getProductImage('geek bar/GEEK BAR/geek_bar_meloso_max_9000_puffs.jpg'),
-            description: 'Geek Bar Meloso Max 9000 is loaded with 14mL of nic salt e-liquid and powered by a 600mAh battery, ensuring robust performance. The dual mesh coils deliver rich clouds and authentic flavors, while the adjustable airflow lets you customize your vaping style.',
-            specs: ['9000 Puffs per disposable', '14mL e-liquid capacity', '5% nicotine strength (50mg/mL)', '600mAh battery capacity', 'Dual mesh coils', 'Adjustable airflow', '5 Devices per pack']
-        },
-        {
-            id: 'ria_nv_30000',
-            name: 'RIA NV 30000 Puffs 5pk',
-            brand: 'RIA',
-            price: 62.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Watermelon Ice',
-            flavors: [{
-                name: 'Watermelon Ice',
-                image: getProductImage('ria/ria_nv_30000_puffs_5pk.jpg')
-            }],
-            image: getProductImage('ria/ria_nv_30000_puffs_5pk.jpg'),
-            description: 'RIA NV 30000 Puffs - High capacity disposable vape with exceptional flavor.',
-            specs: ['30000 Puffs', '5 Devices per pack', 'Pre-filled']
-        },
-        {
-            id: 'digi_flavor_brk_battery',
-            name: 'Digi Flavor BRK Battery 5pk',
-            brand: 'Digi Flavor',
-            price: 33.75,
-            stock: 100,
-            status: 'available',
-            flavor: 'Standard',
-            flavors: [{
-                name: 'Standard',
-                image: getProductImage('digi flavor/digi_flavor_brk_battery_5pk.jpg')
-            }],
-            image: getProductImage('digi flavor/digi_flavor_brk_battery_5pk.jpg'),
-            description: 'Digi Flavor BRK Battery 5pk - Rechargeable battery pack for DripFlavor devices.',
-            specs: ['Rechargeable Battery', '5 Batteries per pack', 'Compatible with DripFlavor']
-        },
-
-        // VIHO Products
-        {
-            id: 'viho_trx_50000',
-            name: 'VIHO TRX 50000 Puffs 5pk',
-            brand: 'VIHO',
-            price: 52.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blue Razz Ice',
-            flavors: [
-                { name: 'Banana Taffy Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_banana_taffy_ice.jpg') },
-                { name: 'Blue Razz Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Clear', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Cherry Strazz', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Cola Slurpee', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Christmas Edition - Blue Razz Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Icy Mint', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Lemon Refresher', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Mango Tango', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Pina Coco', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Sour Blue Dust', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Strawmelon Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'Tobacco', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') },
-                { name: 'White Gummy Ice', image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg') }
-            ],
-            image: getProductImage('viho/VIHO TRX 50K/viho_trx_50k_blue_razz_ice.jpg'),
-            description: 'VIHO TRX 50000 Puffs - Ultra-long lasting disposable vape with premium quality. Master Case: 20 x 5pk.',
-            specs: ['50000 Puffs', '5 Devices per pack', 'Pre-filled', '100% E-Liquid', '100% Battery']
-        },
-        {
-            id: 'viho_supercharge_pro_20000',
-            name: 'VIHO Supercharge PRO 20,000 Puffs 5pk',
-            brand: 'VIHO',
-            price: 45.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Tobacco Mint',
-            flavors: [{
-                name: 'Tobacco Mint',
-                image: getProductImage('viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg')
-            }],
-            image: getProductImage('viho/Viho 20K 0915/viho_supercharge_pro_spearmint.jpg'),
-            description: 'VIHO Supercharge PRO 20000 Puffs - High-performance disposable vape with refreshing mint flavor.',
-            specs: ['20000 Puffs', '5 Devices per pack', 'Pre-filled', '100% E-Liquid', '100% Battery']
-        },
-
-        // JUUL Products
-        {
-            id: 'juul_pods',
-            name: 'JUUL Pods',
-            brand: 'JUUL',
-            price: 38.95,
-            stock: 100,
-            status: 'available',
-            flavor: 'Menthol',
-            flavors: [{
-                name: 'Menthol',
-                image: getProductImage('juul/juul_pods_menthol.jpg')
-            }],
-            image: getProductImage('juul/juul_pods_menthol.jpg'),
-            description: 'JUUL Pods - Classic JUUL pods with 5.0% nicotine, 4 pods per pack.',
-            specs: ['5.0% Nicotine', '4 Pods per pack', 'Menthol flavor', 'Compatible with JUUL device']
-        },
-
-        // RAZ Products
-        {
-            id: 'raz_rx_50000',
-            name: 'RAZ RX 50000 Puffs 5pk',
-            brand: 'RAZ',
-            price: 57.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Code Blue',
-            flavors: [
-                { name: 'Code Blue', image: getProductImage('raz/raz_rx_50000_puffs_5pk.jpg') },
-                { name: 'Code White', image: getProductImage('raz/raz_rx_50000_puffs_5pk.jpg') }
-            ],
-            image: getProductImage('raz/raz_rx_50000_puffs_5pk.jpg'),
-            description: 'RAZ RX 50000 Puffs - Advanced disposable vape with screen display showing battery and puff count. Master Case: 30 x 5pk.',
-            specs: ['50000 Puffs', '5 Devices per pack', 'Digital Display', 'Pre-filled']
-        },
-        {
-            id: 'ryl_classic_35000',
-            name: 'RYL Classic 35000 Puffs 5pk',
-            brand: 'RYL',
-            price: 43.75,
-            stock: 100,
-            status: 'available',
-            flavor: 'Watermelon Ice',
-            flavors: [{
-                name: 'Watermelon Ice',
-                image: getProductImage('ryl/ryl_classic_35000_puffs_5pk.jpg')
-            }],
-            image: getProductImage('ryl/ryl_classic_35000_puffs_5pk.jpg'),
-            description: 'RYL Classic 35000 Puffs - Classic design with premium performance and flavor.',
-            specs: ['35000 Puffs', '5 Devices per pack', 'Pre-filled', 'Classic Design']
-        },
-        {
-            id: 'raz_ltx_25000',
-            name: 'RAZ LTX 25000 Puffs 5pk',
-            brand: 'RAZ',
-            price: 57.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Bangin Sour Berries',
-            flavors: [
-                { name: 'Bangin Sour Berries', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg') },
-                { name: 'Black Cherry Peach', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_black_cherry_peach.jpg') },
-                { name: 'Blue Raz Ice', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Blue Raz Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Blueberry Watermelon', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg') },
-                { name: 'Cherry Strapple', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_cherry_strapple.jpg') },
-                { name: 'Georgia Peach', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Hawaiian Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Iced Blue Dragon', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Miami Mint', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'New York Mint', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Night Crawler', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Orange Pineapple Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Raspberry Limeade', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Sour Apple Ice', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Sour Raspberry Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Strawberry Burst', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Strawberry Kiwi Pear', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Strawberry Peach Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Triple Berry Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Triple Berry Punch', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Tropical Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'White Grape Gush', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Wintergreen', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') }
-            ],
-            image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg'),
-            description: 'RAZ LTX 25000 Puffs - Premium disposable vape with exceptional flavor variety. Master Case: 30 x 5pk.',
-            specs: ['25000 Puffs', '5 Devices per pack', 'Pre-filled']
-        },
-        {
-            id: 'raz_ltx_25000_zero',
-            name: 'RAZ LTX 25000 Puffs 0% Nicotine 5pk',
-            brand: 'RAZ',
-            price: 57.50,
-            stock: 100,
-            status: 'available',
-            flavor: 'Bangin Sour Berries',
-            flavors: [
-                { name: 'Bangin Sour Berries', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_bangin_sour_berries.jpg') },
-                { name: 'Blueberry Watermelon', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blueberry_watermelon.jpg') },
-                { name: 'New York Mint', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') },
-                { name: 'Razzle Dazzle', image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg') }
-            ],
-            image: getProductImage('raz/RAZ LTX 25K/raz_ltx_25000_blue_raz_ice.jpg'),
-            description: 'RAZ LTX 25000 Puffs 0% Nicotine - Zero nicotine option with full flavor experience. Price Increase July 25, 2025. Master Case: 30 x 5pk.',
-            specs: ['25000 Puffs', '0% Nicotine', '5 Devices per pack', 'Pre-filled', 'Zero Nicotine']
-        },
-        {
-            id: 'raz_tn9000_zero',
-            name: 'RAZ TN9000 0% Nicotine 5pk',
-            brand: 'RAZ',
-            price: 48.75,
-            stock: 100,
-            status: 'available',
-            flavor: 'Watermelon Ice',
-            flavors: [{
-                name: 'Watermelon Ice',
-                image: getProductImage('raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg')
-            }],
-            image: getProductImage('raz/RAZ TN9000/raz_tn9000_watermelon_ice_zero.jpg'),
-            description: 'RAZ TN9000 0% Nicotine - Zero nicotine disposable vape with refreshing watermelon ice flavor.',
-            specs: ['9000 Puffs', '0% Nicotine', '5 Devices per pack', 'Pre-filled', 'Zero Nicotine']
-        },
-
-        // Air Bar Products
-        {
-            id: 'air_bar_nex_6500',
-            name: 'Air Bar Nex 6500 Puffs',
-            brand: 'Air Bar',
-            price: 75.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Clear',
-            flavors: [
-                { name: 'Clear', image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg') },
-                { name: 'Cool Mint', image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg') },
-                { name: 'Strawberry Mango', image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg') }
-            ],
-            image: getProductImage('air bar/air_bar_nex_6500_puffs.jpg'),
-            description: 'Air Bar Nex 6500 Puffs - Compact and powerful disposable vape. NOTE: DAILY LIMIT PRODUCT. ONLY 1 ORDER PER DAY. Price Increase Sept 22, 2025.',
-            specs: ['6500 Puffs', 'Pre-filled', 'Disposable', 'Daily Limit: 1 Order Per Day']
-        },
-        {
-            id: 'air_bar_aura_25000',
-            name: 'Air Bar Aura 25,000 Puffs 5pk',
-            brand: 'Air Bar',
-            price: 45.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blue Mint',
-            flavors: [
-                { name: 'Blue Mint', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Blue Razz Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_razz_ice.jpg') },
-                { name: 'Blueberry Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Clear', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Coffee', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Cool Mint', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/air_bar_aura_blue_mint.jpg') },
-                { name: 'Juicy Watermelon Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Miami Mint', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Sakura Grape', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') },
-                { name: 'Sour Apple Ice', image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg') }
-            ],
-            image: getProductImage('air bar/Air Bar Aura 25,000 Puffs 5pk/Air Bar Aura 25,000 Puffs 5pk (Main image).jpg'),
-            description: 'Air Bar Aura 25000 Puffs - High-capacity disposable vape with vibrant design and premium flavors. Master Case: 30 x 5pk.',
-            specs: ['25000 Puffs', '5 Devices per pack', 'Pre-filled', 'Vibrant Design']
-        },
-        {
-            id: 'air_bar_diamond_spark_15000',
-            name: 'Air Bar Diamond Spark 15000 Puffs 5pk',
-            brand: 'Air Bar',
-            price: 40.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Love Story',
-            flavors: [
-                { name: 'Blue Razz Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Blueberry Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Cherry Cola', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Clear', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Coffee', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Cool Mint', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Fcuking FAB', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Frozen Strawberry', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Frozen Watermelon', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Grape Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Juicy Peach Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Love Story', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Sour Apple Ice', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Strawberry Watermelon', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') },
-                { name: 'Virginia Tobacco', image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg') }
-            ],
-            image: getProductImage('air bar/air-bar-diamond-spark-8-250x300.jpg'),
-            description: 'Air Bar Diamond Spark 15000 Puffs - Sparkling design with exceptional flavor and performance.',
-            specs: ['15000 Puffs', '5 Devices per pack', 'Pre-filled', 'Diamond Design']
-        },
-        {
-            id: 'air_bar_diamond_plus_1000',
-            name: 'Air Bar Diamond+ 1000 Puffs 10pk',
-            brand: 'Air Bar',
-            price: 55.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Cool Mint',
-            flavors: [
-                { name: 'Blueberry Ice', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_blueberry_ice.jpg') },
-                { name: 'Clear', image: getProductImage('air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg') },
-                { name: 'Cool Mint', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_cool_mint.jpg') },
-                { name: 'Miami Mint', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_miami_mint.jpg') },
-                { name: 'Watermelon Ice', image: getProductImage('air bar/Airbar AURA   0912/air_bar_diamond_plus_watermelon_ice.jpg') }
-            ],
-            image: getProductImage('air bar/Air Bar Diamond+ 1000 Puffs 10pk.jpg'),
-            description: 'Air Bar Diamond+ 1000 Puffs - Compact disposable vape with 10 devices per pack.',
-            specs: ['1000 Puffs per device', '10 Devices per pack', 'Pre-filled', 'Compact Design']
-        },
-        {
-            id: 'air_bar_mini_2000',
-            name: 'Air Bar Mini 2000 Puffs',
-            brand: 'Air Bar',
-            price: 50.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Blueberry Mint',
-            flavors: [
-                { name: 'Blueberry Mint', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') },
-                { name: 'Frozen Peach', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') },
-                { name: 'Virginia Tobacco', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') },
-                { name: 'Watermelon Candy', image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg') }
-            ],
-            image: getProductImage('air bar/Air Bar Mini 2000 Puffs.jpg'),
-            description: 'Air Bar Mini 2000 Puffs - Mini disposable vape with sweet candy flavors. Price Increase Sept 22, 2025.',
-            specs: ['2000 Puffs', 'Pre-filled', 'Mini Size']
-        },
-        {
-            id: 'air_bar_ab5000_10pk',
-            name: 'Air Bar AB5000 10pk',
-            brand: 'Air Bar',
-            price: 50.00,
-            stock: 100,
-            status: 'available',
-            flavor: 'Black Cheese Cake',
-            flavors: [
-                { name: 'Black Cheese Cake', image: getProductImage('air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_cheese_cake.jpg') },
-                { name: 'Berries Blast', image: getProductImage('air bar/Air Bar AB5000 10pk/air_bar_ab5000_berries_blast.jpg') },
-                { name: 'Black Ice', image: getProductImage('air bar/Air Bar AB5000 10pk/air_bar_ab5000_black_ice.jpg') }
-            ],
-            image: getProductImage('air bar/Air Bar AB5000 10pk/Air Bar AB5000 10pk.jpg'),
-            description: 'Air Bar AB5000 10pk - Value pack with 10 devices, perfect for sharing. Key Features: 10mL Pre-Filled E Liquid, 5% (50mg) Nicotine Strength, 1500mAh NON-Rechargeable Battery, Approximately 5000 Puffs, New PHC (Pre-Heating Coil) Technology.',
-            specs: ['5000 Puffs per device', '10 Devices per pack', '10mL Pre-Filled E Liquid', '5% (50mg) Nicotine', '1500mAh Battery', 'PHC Technology', 'Pre-filled', 'Value Pack']
-        }
-    ];
+    const products = window.INITIAL_PRODUCTS || [];
 
     // Save products to localStorage
     localStorage.setItem('products', JSON.stringify(products));
@@ -3075,362 +2584,18 @@ function initializeProductsFromCode() {
 
 // Note: initializeProductsFromCode() is called in DOMContentLoaded event
 
-// Import products with brands and flavors from Excel
-function importProductsWithBrands() {
-    const fileInput = document.getElementById('importWithBrandsFileInput');
-    if (fileInput) {
-        fileInput.click();
-    }
-}
 
-// Handle Excel import with brands and flavors
-function handleFileImportWithBrands(event) {
-    const file = event.target.files[0];
-    if (!file) return;
 
-    const reader = new FileReader();
 
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-
-            // Get first worksheet
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-
-            // Convert to JSON array
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-                header: 1,
-                defval: ''
-            });
-
-            if (jsonData.length < 2) {
-                alert('Invalid Excel file! File must contain header and at least one product.');
-                event.target.value = '';
-                return;
-            }
-
-            // Get headers (first row)
-            const headers = jsonData[0].map(h => String(h).trim());
-            const importedProducts = [];
-            const newBrands = new Set();
-            const newFlavors = new Set();
-
-            // Process rows (skip header row)
-            for (let i = 1; i < jsonData.length; i++) {
-                const row = jsonData[i];
-                if (!row || row.length === 0) continue;
-
-                const product = {
-                    id: '',
-                    name: '',
-                    brand: '',
-                    flavors: [], // Store as array for multiple flavors
-                    price: 0,
-                    stock: 0,
-                    status: 'available',
-                    image: '',
-                    description: '',
-                    specs: []
-                };
-
-                headers.forEach((header, index) => {
-                    const value = row[index];
-                    const cleanValue = value !== undefined && value !== null ? String(value).trim() : '';
-
-                    if (cleanValue === '') return;
-
-                    switch(header.toLowerCase()) {
-                        case 'id':
-                            product.id = cleanValue;
-                            break;
-                        case 'name':
-                        case 'product name':
-                            product.name = cleanValue;
-                            break;
-                        case 'brand':
-                        case 'brand name':
-                            product.brand = cleanValue;
-                            if (cleanValue) newBrands.add(cleanValue);
-                            break;
-                        case 'flavor':
-                        case 'flavors':
-                            // Handle multiple flavors separated by comma or semicolon
-                            const flavorList = cleanValue.split(/[;,]/).map(f => f.trim()).filter(f => f);
-                            product.flavors = flavorList;
-                            flavorList.forEach(flavor => newFlavors.add(flavor));
-                            break;
-                        case 'price':
-                            product.price = parseFloat(cleanValue) || 0;
-                            break;
-                        case 'stock':
-                        case 'quantity':
-                            product.stock = parseInt(cleanValue) || 0;
-                            break;
-                        case 'status':
-                            product.status = cleanValue || 'available';
-                            break;
-                        case 'image':
-                        case 'image url':
-                            product.image = cleanValue;
-                            break;
-                        case 'description':
-                            product.description = cleanValue;
-                            break;
-                        case 'specs':
-                        case 'specifications':
-                            product.specs = cleanValue.split('\n').filter(s => s.trim());
-                            break;
-                    }
-                });
-
-                if (product.name && product.brand) {
-                    if (!product.id) {
-                        product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-                    }
-                    importedProducts.push(product);
-                }
-            }
-
-            if (importedProducts.length === 0) {
-                alert('No valid products found in Excel file! Each product must have at least a name and brand.');
-                event.target.value = '';
-                return;
-            }
-
-            // Show summary and confirmation
-            let summary = `Found ${importedProducts.length} products to import.\n\n`;
-            summary += `New brands to be created: ${Array.from(newBrands).join(', ') || 'None'}\n`;
-            summary += `New flavors to be created: ${Array.from(newFlavors).join(', ') || 'None'}\n\n`;
-
-            summary += 'This will:\n';
-            summary += '• Add new brands to the brand list\n';
-            summary += '• Add new flavors to the flavor list\n';
-            summary += '• Import products with their brand and flavor associations\n\n';
-
-            const action = confirm(summary + 'Click OK to proceed with the import.');
-
-            if (action) {
-                // Add new brands
-                const existingBrands = getBrands();
-                const existingBrandNames = getBrandNames(existingBrands);
-                let brandsAdded = 0;
-
-                newBrands.forEach(brandName => {
-                    if (!existingBrandNames.includes(brandName)) {
-                        // Add new brand with default display order
-                        const maxOrder = Math.max(...existingBrands.map(b => b.displayOrder || 0), 0);
-                        existingBrands.push({
-                            name: brandName,
-                            displayOrder: maxOrder + 1
-                        });
-                        brandsAdded++;
-                    }
-                });
-
-                if (brandsAdded > 0) {
-                    localStorage.setItem('brands', JSON.stringify(existingBrands));
-                }
-
-                // Add new flavors
-                let existingFlavors = JSON.parse(localStorage.getItem('flavors') || '[]');
-                let flavorsAdded = 0;
-
-                newFlavors.forEach(flavorName => {
-                    if (!existingFlavors.some(f => f.name === flavorName)) {
-                        existingFlavors.push({
-                            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                            name: flavorName
-                        });
-                        flavorsAdded++;
-                    }
-                });
-
-                if (flavorsAdded > 0) {
-                    localStorage.setItem('flavors', JSON.stringify(existingFlavors));
-                }
-
-                // Create brand-flavor associations
-                let brandFlavors = JSON.parse(localStorage.getItem('brandFlavors') || '{}');
-                let associationsAdded = 0;
-
-                newBrands.forEach(brandName => {
-                    if (!brandFlavors[brandName]) {
-                        brandFlavors[brandName] = [];
-                    }
-
-                    newFlavors.forEach(flavorName => {
-                        if (!brandFlavors[brandName].includes(flavorName)) {
-                            brandFlavors[brandName].push(flavorName);
-                            associationsAdded++;
-                        }
-                    });
-                });
-
-                if (associationsAdded > 0) {
-                    localStorage.setItem('brandFlavors', JSON.stringify(brandFlavors));
-                }
-
-                // Add products (merge mode)
-                let existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-                let productsAdded = 0;
-
-                importedProducts.forEach(imported => {
-                    // Check for duplicates by ID or name+brand combination
-                    const isDuplicate = existingProducts.some(existing =>
-                        existing.id === imported.id ||
-                        (existing.name === imported.name && existing.brand === imported.brand)
-                    );
-
-                    if (!isDuplicate) {
-                        // Convert flavors array to flavor objects for storage
-                        if (imported.flavors && imported.flavors.length > 0) {
-                            imported.flavorsData = imported.flavors.map(flavorName => ({
-                                name: flavorName,
-                                image: '' // Empty image, can be updated later
-                            }));
-                        }
-
-                        existingProducts.push(imported);
-                        productsAdded++;
-                    }
-                });
-
-                localStorage.setItem('products', JSON.stringify(existingProducts));
-
-                // Refresh UI
-                loadBrands();
-                loadFlavors();
-                loadProductsAdmin();
-                updateDashboardStats();
-                populateBrandAndFlavorSelects();
-
-                alert(`Import completed successfully!\n\n` +
-                      `• Products added: ${productsAdded}\n` +
-                      `• Brands created: ${brandsAdded}\n` +
-                      `• Flavors created: ${flavorsAdded}\n` +
-                      `• Brand-flavor associations: ${associationsAdded}`);
-            }
-
-            event.target.value = '';
-        } catch (error) {
-            console.error('Excel import error:', error);
-            alert('Error importing Excel file: ' + error.message);
-            event.target.value = '';
-        }
-    };
-
-    reader.readAsArrayBuffer(file);
-}
-
-// Download Excel template
-function downloadExcelTemplate() {
-    if (typeof XLSX === 'undefined') {
-        alert('Excel library not loaded. Please refresh the page and try again.');
-        return;
-    }
-
-    // Create sample data
-    const sampleData = [
-        {
-            'Name': 'Blue Razz Ice',
-            'Brand': 'Geek Bar',
-            'Flavor': 'Blue Razz Ice',
-            'Price': 15.99,
-            'Stock': 50,
-            'Status': 'available',
-            'Image': '',
-            'Description': 'A refreshing blue raspberry ice flavor',
-            'Specs': '7500 Puffs\n5% Nicotine\nDisposable'
-        },
-        {
-            'Name': 'Mint Blast',
-            'Brand': 'VIHO',
-            'Flavor': 'Mint, Ice, Blast',
-            'Price': 12.99,
-            'Stock': 30,
-            'Status': 'available',
-            'Image': '',
-            'Description': 'Cool mint with ice blast',
-            'Specs': '5000 Puffs\n2% Nicotine\nDisposable'
-        },
-        {
-            'Name': 'Strawberry Watermelon',
-            'Brand': 'Air Bar',
-            'Flavor': 'Strawberry, Watermelon',
-            'Price': 18.99,
-            'Stock': 25,
-            'Status': 'available',
-            'Image': '',
-            'Description': 'Sweet strawberry watermelon mix',
-            'Specs': '8000 Puffs\n5% Nicotine\nDisposable'
-        }
-    ];
-
-    // Create worksheet
-    const worksheet = XLSX.utils.json_to_sheet(sampleData);
-
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products Template');
-
-    // Generate file and download
-    XLSX.writeFile(workbook, 'product_import_template.xlsx');
-
-    alert('Template downloaded! Fill it out and use "Import Excel with Brands" to upload your products.');
-}
-
-// Show Excel format help
-function showExcelFormatHelp() {
-    const helpText = `
-EXCEL IMPORT FORMAT HELP
-
-Your Excel file should have these columns (case-insensitive):
-• Name/Product Name - Product name (required)
-• Brand/Brand Name - Brand name (required)
-• Flavor/Flavors - One or more flavors separated by comma or semicolon (optional)
-• Price - Product price (optional, defaults to 0)
-• Stock/Quantity - Stock quantity (optional, defaults to 0)
-• Status - Product status (optional, defaults to 'available')
-• Image/Image URL - Product image URL (optional)
-• Description - Product description (optional)
-• Specs/Specifications - Product specifications (one per line, optional)
-
-Example Excel content:
-| Name          | Brand     | Flavor              | Price | Stock | Status     | Image |
-|---------------|-----------|---------------------|-------|-------|------------|-------|
-| Blue Razz Ice | Geek Bar  | Blue Razz Ice       | 15.99 | 50    | available  |       |
-| Mint Blast    | VIHO      | Mint, Ice, Blast    | 12.99 | 30    | available  |       |
-
-What this import does:
-✓ Automatically creates new brands if they don't exist
-✓ Automatically creates new flavors if they don't exist
-✓ Creates brand-flavor associations automatically
-✓ Imports products with proper relationships
-✓ Skips duplicate products (same name + brand combination)
-
-Notes:
-• First row must be headers
-• Name and Brand columns are required for each product
-• Flavors can be multiple (separated by comma or semicolon)
-• Products with missing required fields will be skipped
-• Existing brands/flavors won't be duplicated
-`;
-
-    alert(helpText);
-}
 
 // Make functions available globally
-window.exportProducts = exportProducts;
-window.importProducts = importProducts;
-window.handleFileImport = handleFileImport;
-window.importProductsWithBrands = importProductsWithBrands;
-window.handleFileImportWithBrands = handleFileImportWithBrands;
+window.triggerExcelImport = triggerExcelImport;
+window.handleExcelImport = handleExcelImport;
+window.exportToExcel = exportToExcel;
 window.downloadExcelTemplate = downloadExcelTemplate;
-window.showExcelFormatHelp = showExcelFormatHelp;
+window.clearDatabase = clearDatabase;
+window.clearAllData = clearAllData;
 window.editFlavor = editFlavor;
 window.deleteFlavor = deleteFlavor;
 window.addFlavor = addFlavor;
 window.syncFlavorsFromProducts = syncFlavorsFromProducts;
-
